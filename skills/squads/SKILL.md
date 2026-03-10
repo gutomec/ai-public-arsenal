@@ -1,9 +1,14 @@
 ---
 name: squads
-description: Standalone squad manager — creates, inspects, validates, and manages squads (multi-agent teams). Scaffolds directories, agents, tasks, workflows. Registers squads for slash commands. Works independently without AIOS. Activates on: create squad, list squads, add agent, validate squad, run workflow, inspect squad, manage squad.
+description: "Standalone squad manager — creates, inspects, validates, and manages squads (multi-agent teams). Scaffolds directories, agents, tasks, workflows. Registers squads for slash commands. Works independently without AIOS. Activates on: create squad, list squads, add agent, validate squad, run workflow, inspect squad, manage squad."
+license: MIT
+compatibility: "Claude Code, Codex, Gemini CLI, Cursor, Antigravity, Windsurf, OpenCode"
 allowed-tools: Read Write Edit Glob Grep Bash(mkdir:*) Bash(ls:*) Bash(cp:*) Bash(ln:*) Bash(rm:*) Bash(cat:*) Bash(wc:*)
 argument-hint: "[command] [args]"
 context: fork
+metadata:
+  author: gutomec
+  version: "2.0"
 ---
 
 # Squad Manager — Standalone Multi-Agent Team Orchestrator
