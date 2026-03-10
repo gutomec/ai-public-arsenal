@@ -2,7 +2,7 @@
 name: squads
 description: Standalone squad manager — creates, inspects, validates, and manages squads (multi-agent teams). Scaffolds directories, agents, tasks, workflows. Registers squads for slash commands. Works independently without AIOS. Activates on: create squad, list squads, add agent, validate squad, run workflow, inspect squad, manage squad.
 allowed-tools: Read Write Edit Glob Grep Bash(mkdir:*) Bash(ls:*) Bash(cp:*) Bash(ln:*) Bash(rm:*) Bash(cat:*) Bash(wc:*)
-argument-hint: [command] [args]
+argument-hint: "[command] [args]"
 context: fork
 ---
 
