@@ -1,0 +1,122 @@
+workflow_name: lp_build_parallel
+description: "Sub-workflow paralelo: frontend e backend executam simultaneamente (backend condicional)"
+
+agent_sequence:
+  - lp-frontend-dev
+  - lp-backend-dev
+
+success_indicators:
+  - "Landing page assembled with all sections"
+  - "SEO metadata complete"
+  - "Backend API functional (if enabled)"
+  - "Admin panel working (if enabled)"
+
+workflow:
+  id: lp-build-parallel
+  name: "LP Build Parallel"
+  description: "Sub-workflow paralelo: frontend e backend executam simultaneamente (backend condicional)"
+  type: fan-out
+
+  sequence:
+    - agent: lp-frontend-dev
+      action: "setupFrontendProject"
+      creates: "frontend-project"
+    - agent: lp-frontend-dev
+      action: "implementDesignSystem"
+      creates: "design-system-code"
+    - agent: lp-frontend-dev
+      action: "buildSection"
+      creates: "section-component"
+    - agent: lp-frontend-dev
+      action: "assemblePage"
+      creates: "landing-page"
+    - agent: lp-backend-dev
+      action: "setupBackendProject"
+      creates: "backend-project"
+    - agent: lp-backend-dev
+      action: "createLeadEndpoints"
+      creates: "leads-api"
+    - agent: lp-backend-dev
+      action: "buildAdminPanel"
+      creates: "admin-panel"
+
+  key_commands:
+    - "*start-build"
+
+  trigger_threshold: 2
+  typical_duration: "20-35 minutes"
+
+  success_indicators:
+    - "Landing page assembled with all sections"
+    - "SEO metadata complete"
+    - "Backend API functional (if enabled)"
+    - "Admin panel working (if enabled)"
+
+  notes:
+    - "Backend branch only executes if backend=true in scope flags"
+    - "Frontend and backend can run in parallel fan-out pattern"
+    - "Frontend does not depend on backend; integration happens in next workflow phase"
+
+  transitions:
+    frontend_setup:
+      trigger: "Content, design system, and images are available; frontend build begins"
+      confidence: 0.90
+      greeting_message: "Iniciando setup do frontend. Pixel configura Next.js com design system..."
+      next_steps:
+        - command: "*setup-frontend"
+          description: "Pixel inicializa projeto Next.js com design tokens e configuração SEO"
+          priority: 1
+
+    design_system_implemented:
+      trigger: "Design tokens, global styles, and base components implemented in code"
+      confidence: 0.87
+      greeting_message: "Design system implementado no código. Construindo seções..."
+      next_steps:
+        - command: "*build-sections"
+          description: "Pixel implementa cada seção como componente com light/dark support"
+          priority: 1
+
+    sections_built:
+      trigger: "All landing page sections built as components with responsive layout"
+      confidence: 0.85
+      greeting_message: "Todas as seções construídas. Montando página final..."
+      next_steps:
+        - command: "*assemble-page"
+          description: "Pixel monta página final com SEO metadata, structured data e A11y"
+          priority: 1
+
+    page_assembled:
+      trigger: "Landing page fully assembled with SEO metadata and accessibility attributes"
+      confidence: 0.88
+      greeting_message: "Frontend montado com sucesso. Página completa com SEO e acessibilidade."
+      next_steps:
+        - command: "*verify-frontend"
+          description: "Verificar renderização, responsividade e performance"
+          priority: 1
+
+    backend_setup:
+      trigger: "Scope flags indicate backend=true; backend build begins in parallel with frontend"
+      confidence: 0.85
+      greeting_message: "[CONDICIONAL] Backend habilitado. Forge configura FastAPI..."
+      next_steps:
+        - command: "*setup-backend"
+          description: "Forge inicializa projeto Python FastAPI com estrutura base"
+          priority: 1
+
+    endpoints_created:
+      trigger: "All required API endpoints implemented and tested"
+      confidence: 0.85
+      greeting_message: "Endpoints da API criados e testados. Construindo painel admin..."
+      next_steps:
+        - command: "*build-admin"
+          description: "Forge implementa painel administrativo para gerenciar conteúdo"
+          priority: 1
+
+    admin_built:
+      trigger: "Admin panel implemented with CRUD operations for landing page content"
+      confidence: 0.85
+      greeting_message: "[CONDICIONAL] Backend e admin prontos. Aguardando frontend para integração."
+      next_steps:
+        - command: "*start-integrations"
+          description: "Avançar para integrações com Bridge"
+          priority: 1

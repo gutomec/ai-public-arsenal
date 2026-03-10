@@ -1,0 +1,194 @@
+workflow_name: lp_full_pipeline
+description: "Pipeline completo end-to-end: Discovery → Research → Copy+Design → Images → Frontend+Backend → Integrations → QA"
+
+agent_sequence:
+  - lp-strategist
+  - lp-researcher
+  - lp-copywriter
+  - lp-design-architect
+  - lp-image-creator
+  - lp-frontend-dev
+  - lp-backend-dev
+  - lp-integrator
+  - lp-reviewer
+
+success_indicators:
+  - "Final QA report PASS (>=8.0)"
+  - "All sections implemented with light/dark"
+  - "SEO metadata complete"
+  - "WCAG AAA verified"
+
+workflow:
+  id: lp-full-pipeline
+  name: "LP Full Pipeline"
+  description: "Pipeline completo end-to-end: Discovery → Research → Copy+Design → Images → Frontend+Backend → Integrations → QA"
+  type: pipeline
+
+  sequence:
+    - agent: lp-strategist
+      action: "discover"
+      creates: "product-brief.md"
+    - agent: lp-strategist
+      action: "elicit"
+      creates: "questionnaire-answers.md"
+    - agent: lp-strategist
+      action: "scope"
+      creates: "scope-definition.md"
+    - agent: lp-researcher
+      action: "competitors"
+      creates: "competitor-audit.md"
+    - agent: lp-researcher
+      action: "audience"
+      creates: "audience-analysis.md"
+    - agent: lp-researcher
+      action: "copy-experts"
+      creates: "copy-expert-references.md"
+    - agent: lp-researcher
+      action: "synthesize"
+      creates: "research-synthesis.md"
+    - agent: lp-copywriter
+      action: "write-section"
+      creates: "section-copy.md"
+    - agent: lp-design-architect
+      action: "select-ds"
+      creates: "ds-selection.md"
+    - agent: lp-design-architect
+      action: "tokens"
+      creates: "design-tokens.md"
+    - agent: lp-design-architect
+      action: "components"
+      creates: "component-specs.md"
+    - agent: lp-design-architect
+      action: "sections"
+      creates: "section-layouts.md"
+    - agent: lp-image-creator
+      action: "hero"
+      creates: "hero-image"
+    - agent: lp-image-creator
+      action: "sections"
+      creates: "section-images"
+    - agent: lp-frontend-dev
+      action: "setup"
+      creates: "frontend-project"
+    - agent: lp-frontend-dev
+      action: "design-system"
+      creates: "design-system-code"
+    - agent: lp-frontend-dev
+      action: "build-section"
+      creates: "section-component"
+    - agent: lp-frontend-dev
+      action: "assemble"
+      creates: "landing-page"
+    - agent: lp-backend-dev
+      action: "setup"
+      creates: "backend-project"
+    - agent: lp-backend-dev
+      action: "leads"
+      creates: "leads-api"
+    - agent: lp-backend-dev
+      action: "admin"
+      creates: "admin-panel"
+    - agent: lp-integrator
+      action: "whatsapp"
+      creates: "whatsapp-integration"
+    - agent: lp-integrator
+      action: "email"
+      creates: "email-integration"
+    - agent: lp-integrator
+      action: "connect"
+      creates: "api-connection"
+    - agent: lp-reviewer
+      action: "copy"
+      creates: "copy-review.md"
+    - agent: lp-reviewer
+      action: "design"
+      creates: "design-review.md"
+    - agent: lp-reviewer
+      action: "seo-a11y"
+      creates: "seo-a11y-review.md"
+    - agent: lp-reviewer
+      action: "backend"
+      creates: "backend-review.md"
+    - agent: lp-reviewer
+      action: "integrations"
+      creates: "integration-review.md"
+    - agent: lp-reviewer
+      action: "final-report"
+      creates: "final-report.md"
+
+  key_commands:
+    - "*run-full-pipeline"
+    - "*create-landing-page"
+
+  trigger_threshold: 2
+  typical_duration: "60-120 minutes"
+
+  success_indicators:
+    - "Final QA report PASS (>=8.0)"
+    - "All sections implemented with light/dark"
+    - "SEO metadata complete"
+    - "WCAG AAA verified"
+
+  transitions:
+    discovery_complete:
+      trigger: "Strategist finishes product brief and scope definition with conditional flags"
+      confidence: 0.90
+      greeting_message: "Discovery completa. Brief do produto e escopo definidos. Iniciando pesquisa de mercado..."
+      next_steps:
+        - command: "*start-research"
+          description: "Scout analisa mercado, concorrentes e referências visuais"
+          priority: 1
+
+    research_complete:
+      trigger: "Researcher delivers market analysis, competitor audit, and visual references"
+      confidence: 0.88
+      greeting_message: "Pesquisa concluída. Análise de mercado e referências visuais prontas. Iniciando copy e design em paralelo..."
+      next_steps:
+        - command: "*start-content-design"
+          description: "Quill e Prism trabalham em paralelo — copy e design system"
+          priority: 1
+
+    content_design_complete:
+      trigger: "Both copywriter and design architect have finished their deliverables"
+      confidence: 0.85
+      greeting_message: "Copy e design system finalizados. Iniciando geração de imagens..."
+      next_steps:
+        - command: "*generate-images"
+          description: "Lens gera imagens baseadas no copy e design system"
+          priority: 1
+
+    images_complete:
+      trigger: "All required images generated and approved for each section"
+      confidence: 0.87
+      greeting_message: "Imagens geradas e aprovadas. Iniciando build do frontend e backend..."
+      next_steps:
+        - command: "*start-build"
+          description: "Pixel e Forge constroem frontend e backend em paralelo"
+          priority: 1
+
+    build_complete:
+      trigger: "Frontend assembled and backend API functional (if enabled)"
+      confidence: 0.85
+      greeting_message: "Build concluído. Frontend montado e backend funcional. Iniciando integrações..."
+      next_steps:
+        - command: "*start-integrations"
+          description: "Bridge conecta WhatsApp, email e frontend↔backend"
+          priority: 1
+
+    integrations_complete:
+      trigger: "All integrations connected and verified (WhatsApp, email, API)"
+      confidence: 0.85
+      greeting_message: "Integrações conectadas e verificadas. Iniciando QA final..."
+      next_steps:
+        - command: "*run-qa"
+          description: "Shield executa revisão multi-dimensional completa"
+          priority: 1
+
+    qa_complete:
+      trigger: "Final QA report generated with score >= 8.0 and verdict PASS"
+      confidence: 0.90
+      greeting_message: "QA finalizada com sucesso! Landing page pronta para deploy."
+      next_steps:
+        - command: "*export-project"
+          description: "Exportar projeto final para entrega"
+          priority: 1

@@ -1,0 +1,67 @@
+workflow_name: lp_discovery_flow
+description: "Sub-workflow de discovery: absorver ideia, questionário interativo, definir escopo"
+
+agent_sequence:
+  - lp-strategist
+
+success_indicators:
+  - "Product brief complete"
+  - "All 10 questions answered"
+  - "Conditional flags defined"
+
+workflow:
+  id: lp-discovery-flow
+  name: "LP Discovery Flow"
+  description: "Sub-workflow de discovery: absorver ideia, questionário interativo, definir escopo"
+  type: sequential
+
+  sequence:
+    - agent: lp-strategist
+      action: "discoverProduct"
+      creates: "product-brief.md"
+    - agent: lp-strategist
+      action: "elicitRequirements"
+      creates: "questionnaire-answers.md"
+    - agent: lp-strategist
+      action: "defineScope"
+      creates: "scope-definition.md"
+
+  key_commands:
+    - "*start-discovery"
+    - "*discover-product"
+
+  trigger_threshold: 2
+  typical_duration: "10-20 minutes"
+
+  success_indicators:
+    - "Product brief complete"
+    - "All 10 questions answered"
+    - "Conditional flags defined"
+
+  transitions:
+    idea_absorbed:
+      trigger: "Strategist receives and processes the initial product/service idea from user"
+      confidence: 0.92
+      greeting_message: "Ideia absorvida. Iniciando questionário interativo para definir o escopo completo..."
+      next_steps:
+        - command: "*run-questionnaire"
+          description: "Executar questionário de 10 perguntas para refinar escopo"
+          priority: 1
+
+    questionnaire_complete:
+      trigger: "All 10 discovery questions answered and validated by user"
+      confidence: 0.88
+      greeting_message: "Questionário completo. Todas as respostas coletadas. Definindo escopo e flags condicionais..."
+      next_steps:
+        - command: "*define-scope"
+          description: "Consolidar respostas em product brief com flags condicionais (backend, integrações)"
+          priority: 1
+
+    scope_defined:
+      trigger: "Product brief finalized with conditional flags (backend=true/false, integrations list)"
+      confidence: 0.90
+      greeting_message: "Escopo definido com sucesso! Product brief e flags condicionais prontos para pesquisa."
+      next_steps:
+        - command: "*start-research"
+          description: "Avançar para pesquisa de mercado com Scout"
+          priority: 1

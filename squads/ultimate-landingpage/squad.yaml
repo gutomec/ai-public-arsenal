@@ -1,0 +1,154 @@
+name: ultimate-landingpage
+version: 1.0.0
+description: >
+  Squad fullstack para criação de landing pages de ultra-alta conversão.
+  Pipeline end-to-end com 9 agentes especializados: discovery de produto,
+  pesquisa de mercado e experts de copywriting, design system atômico com
+  contraste WCAG AAA e light/dark, geração de imagens por IA, frontend
+  Next.js com SEO perfeito e acessibilidade WCAG AAA, backend Python FastAPI
+  com admin panel e exportação CSV, integrações com WhatsApp (evolution-api)
+  e email (MCP), e QA multi-dimensional com score por dimensão.
+author: gutomec
+license: MIT
+slashPrefix: ultimate-lp
+
+aios:
+  minVersion: "2.1.0"
+  type: squad
+
+components:
+  agents:
+    - lp-strategist.md
+    - lp-researcher.md
+    - lp-copywriter.md
+    - lp-design-architect.md
+    - lp-image-creator.md
+    - lp-frontend-dev.md
+    - lp-backend-dev.md
+    - lp-integrator.md
+    - lp-reviewer.md
+  tasks:
+    - lp-strategist-discover.md
+    - lp-strategist-elicit.md
+    - lp-strategist-scope.md
+    - lp-researcher-competitors.md
+    - lp-researcher-audience.md
+    - lp-researcher-copy-experts.md
+    - lp-researcher-synthesize.md
+    - lp-copywriter-write-section.md
+    - lp-copywriter-review-tone.md
+    - lp-design-architect-select-ds.md
+    - lp-design-architect-tokens.md
+    - lp-design-architect-components.md
+    - lp-design-architect-sections.md
+    - lp-design-architect-backend-spec.md
+    - lp-image-creator-hero.md
+    - lp-image-creator-sections.md
+    - lp-frontend-dev-setup.md
+    - lp-frontend-dev-design-system.md
+    - lp-frontend-dev-build-section.md
+    - lp-frontend-dev-assemble.md
+    - lp-backend-dev-setup.md
+    - lp-backend-dev-leads.md
+    - lp-backend-dev-admin.md
+    - lp-integrator-whatsapp.md
+    - lp-integrator-email.md
+    - lp-integrator-connect.md
+    - lp-reviewer-copy.md
+    - lp-reviewer-design.md
+    - lp-reviewer-seo-a11y.md
+    - lp-reviewer-backend.md
+    - lp-reviewer-integrations.md
+    - lp-reviewer-final-report.md
+  workflows:
+    - lp-full-pipeline.yaml
+    - lp-discovery-flow.yaml
+    - lp-design-copy-parallel.yaml
+    - lp-build-parallel.yaml
+    - lp-section-pipeline.yaml
+    - lp-qa-gate.yaml
+  checklists: []
+  templates: []
+  tools: []
+  scripts: []
+
+config:
+  extends: extend
+  coding-standards: config/coding-standards.md
+  tech-stack: config/tech-stack.md
+  source-tree: config/source-tree.md
+
+dependencies:
+  node: []
+  python:
+    - "fastapi>=0.115.0"
+    - "sqlalchemy>=2.0.0"
+    - "alembic>=1.13.0"
+    - "pydantic>=2.0.0"
+    - "python-jose>=3.3.0"
+    - "passlib>=1.7.0"
+    - "uvicorn>=0.30.0"
+  squads: []
+
+mcpTools:
+  required:
+    - nano-banana-pro: "Geração de imagens para hero e seções (Google Gemini)"
+  optional:
+    - dalle3: "Geração alternativa de imagens (GPT Image)"
+    - fal-video: "Geração de imagens adicionais (Imagen4, Ideogram, Flux, etc.)"
+    - flux: "Geração de imagens com alta aderência a prompt"
+    - shadcn: "Componentes UI base para o design system"
+
+conditionalComponents:
+  backend:
+    flag: "backend"
+    agents: ["lp-backend-dev"]
+    tasks: ["lp-backend-dev-setup.md", "lp-backend-dev-leads.md", "lp-backend-dev-admin.md", "lp-design-architect-backend-spec.md"]
+    description: "Backend Python FastAPI com captura de leads e admin panel"
+  whatsapp:
+    flag: "whatsapp"
+    agents: ["lp-integrator"]
+    tasks: ["lp-integrator-whatsapp.md"]
+    description: "Integração com WhatsApp via evolution-api"
+  email:
+    flag: "email"
+    agents: ["lp-integrator"]
+    tasks: ["lp-integrator-email.md"]
+    description: "Integração com email via SMTP/MCP"
+  adminPanel:
+    flag: "admin_panel"
+    tasks: ["lp-backend-dev-admin.md"]
+    description: "Painel administrativo para gerenciamento de leads"
+
+landingPageSections:
+  - navigation
+  - hero
+  - social-proof-bar
+  - problem-agitation
+  - solution-demo
+  - testimonials
+  - benefits
+  - features
+  - pricing
+  - faq
+  - final-cta
+  - footer
+
+tags:
+  - landing-page
+  - fullstack
+  - copywriting
+  - design-system
+  - atomic-design
+  - seo
+  - accessibility
+  - wcag-aaa
+  - light-dark-mode
+  - fastapi
+  - nextjs
+  - whatsapp
+  - evolution-api
+  - lead-capture
+  - conversion
+  - marketing
+  - image-generation

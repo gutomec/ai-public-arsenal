@@ -1,0 +1,188 @@
+workflow_name: lp_qa_gate
+description: "Gate de qualidade multi-dimensional com ciclo de revisão/correção"
+
+agent_sequence:
+  - lp-reviewer
+  - lp-copywriter
+  - lp-design-architect
+  - lp-frontend-dev
+  - lp-backend-dev
+  - lp-integrator
+
+success_indicators:
+  - "Final report score >= 8.0"
+  - "No BLOCKER issues remaining"
+  - "All dimensions reviewed"
+
+workflow:
+  id: lp-qa-gate
+  name: "LP QA Gate"
+  description: "Gate de qualidade multi-dimensional com ciclo de revisão/correção"
+  type: generator-critic
+
+  sequence:
+    - agent: lp-reviewer
+      action: "reviewCopyQuality"
+      creates: "copy-review.md"
+    - agent: lp-reviewer
+      action: "reviewDesignConsistency"
+      creates: "design-review.md"
+    - agent: lp-reviewer
+      action: "reviewSeoAccessibility"
+      creates: "seo-a11y-review.md"
+    - agent: lp-reviewer
+      action: "reviewBackendSecurity"
+      creates: "backend-review.md"
+    - agent: lp-reviewer
+      action: "reviewIntegrations"
+      creates: "integration-review.md"
+    - agent: lp-reviewer
+      action: "produceFinalReport"
+      creates: "final-report.md"
+
+  key_commands:
+    - "*run-qa"
+    - "*review-all"
+
+  trigger_threshold: 2
+  typical_duration: "15-30 minutes"
+
+  success_indicators:
+    - "Final report score >= 8.0"
+    - "No BLOCKER issues remaining"
+    - "All dimensions reviewed"
+
+  notes:
+    - "Generator-Critic pattern: Shield reviews, responsible agents fix, Shield re-reviews"
+    - "Maximum 3 fix-and-re-review iterations before escalation"
+    - "Backend and integration reviews are conditional on scope flags"
+    - "Each dimension scored independently; final score is weighted average"
+
+  max_iterations: 3
+
+  review_dimensions:
+    - copy_quality
+    - design_consistency
+    - seo_a11y_compliance
+    - backend_functionality
+    - integration_reliability
+
+  verdicts:
+    - name: "PASS"
+      score_range: ">=8.0"
+      action: "Approve and finalize"
+    - name: "CONCERNS"
+      score_range: "7.0-7.9"
+      action: "Approve with noted concerns for future improvement"
+    - name: "NEEDS_WORK"
+      score_range: "5.0-6.9"
+      action: "Route fixes to responsible agents, then re-review"
+    - name: "FAIL"
+      score_range: "<5.0"
+      action: "Block release, route critical fixes, then re-review"
+
+  transitions:
+    review_copy:
+      trigger: "QA gate initiated; Shield begins reviewing copy quality and messaging"
+      confidence: 0.90
+      greeting_message: "Iniciando revisão de copy. Avaliando qualidade, tom e framework de persuasão..."
+      next_steps:
+        - command: "*review-copy"
+          description: "Shield avalia copy de todas as seções: clareza, CTA, tom, framework"
+          priority: 1
+
+    review_design:
+      trigger: "Copy review complete; proceeding to design consistency review"
+      confidence: 0.88
+      greeting_message: "Copy revisado. Iniciando revisão de design system e consistência visual..."
+      next_steps:
+        - command: "*review-design"
+          description: "Shield valida design tokens, contraste, espaçamento e coerência light/dark"
+          priority: 1
+
+    review_seo_a11y:
+      trigger: "Design review complete; proceeding to SEO and accessibility review"
+      confidence: 0.87
+      greeting_message: "Design revisado. Iniciando revisão de SEO e acessibilidade..."
+      next_steps:
+        - command: "*review-seo-a11y"
+          description: "Shield valida metadata, structured data, WCAG AAA, performance"
+          priority: 1
+
+    review_backend:
+      trigger: "SEO/A11y review complete and backend=true in scope flags"
+      confidence: 0.85
+      greeting_message: "[CONDICIONAL] Revisando backend API e painel admin..."
+      next_steps:
+        - command: "*review-backend"
+          description: "Shield valida endpoints, segurança, validação e admin panel"
+          priority: 1
+
+    review_integrations:
+      trigger: "Backend review complete (or skipped) and integrations exist in scope"
+      confidence: 0.85
+      greeting_message: "[CONDICIONAL] Revisando integrações (WhatsApp, email, API)..."
+      next_steps:
+        - command: "*review-integrations"
+          description: "Shield valida cada integração: conectividade, error handling, fallbacks"
+          priority: 1
+
+    final_report:
+      trigger: "All applicable review dimensions completed; Shield compiles final report"
+      confidence: 0.90
+      greeting_message: "Todas as dimensões revisadas. Compilando relatório final..."
+      next_steps:
+        - command: "*compile-qa-report"
+          description: "Shield gera relatório com scores por dimensão e veredito final"
+          priority: 1
+
+    verdict_pass:
+      trigger: "Final report score >= 8.0"
+      confidence: 0.92
+      greeting_message: "QA PASS! Score final acima de 8.0. Landing page aprovada."
+      next_steps:
+        - command: "*finalize-project"
+          description: "Finalizar projeto e preparar para entrega"
+          priority: 1
+
+    verdict_concerns:
+      trigger: "Final report score between 7.0 and 7.9"
+      confidence: 0.85
+      greeting_message: "QA CONCERNS. Score entre 7.0 e 7.9. Aprovada com ressalvas documentadas."
+      next_steps:
+        - command: "*document-concerns"
+          description: "Documentar concerns para melhoria futura"
+          priority: 1
+
+    verdict_needs_work:
+      trigger: "Final report score between 5.0 and 6.9 and iterations < max_iterations"
+      confidence: 0.85
+      greeting_message: "QA NEEDS_WORK. Roteando correções para agentes responsáveis..."
+      next_steps:
+        - command: "*route-fixes"
+          description: "Enviar issues para agentes responsáveis (Quill, Prism, Pixel, Forge, Bridge)"
+          priority: 1
+        - command: "*re-review"
+          description: "Após correções, Shield executa nova revisão"
+          priority: 2
+
+    verdict_fail:
+      trigger: "Final report score < 5.0 and iterations < max_iterations"
+      confidence: 0.85
+      greeting_message: "QA FAIL. Issues críticas encontradas. Bloqueando release e roteando correções..."
+      next_steps:
+        - command: "*route-critical-fixes"
+          description: "Enviar issues BLOCKER para agentes responsáveis com prioridade máxima"
+          priority: 1
+        - command: "*re-review"
+          description: "Após correções críticas, Shield executa nova revisão completa"
+          priority: 2
+
+    escalation:
+      trigger: "Max iterations (3) reached without achieving PASS or CONCERNS verdict"
+      confidence: 0.90
+      greeting_message: "Limite de iterações atingido. Escalando para decisão manual."
+      next_steps:
+        - command: "*escalate-qa"
+          description: "Escalar para revisão manual com relatório detalhado de todas as iterações"
+          priority: 1

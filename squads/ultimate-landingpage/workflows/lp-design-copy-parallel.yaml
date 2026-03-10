@@ -1,0 +1,96 @@
+workflow_name: lp_design_copy_parallel
+description: "Sub-workflow paralelo: copywriting e design system executam simultaneamente, depois merge para imagens"
+
+agent_sequence:
+  - lp-copywriter
+  - lp-design-architect
+  - lp-image-creator
+
+success_indicators:
+  - "All section copy written"
+  - "Design system complete with light/dark tokens"
+  - "WCAG AAA contrast verified"
+  - "Hero + section images generated"
+
+workflow:
+  id: lp-design-copy-parallel
+  name: "LP Design & Copy Parallel"
+  description: "Sub-workflow paralelo: copywriting e design system executam simultaneamente, depois merge para imagens"
+  type: fan-out
+
+  sequence:
+    - agent: lp-copywriter
+      action: "writeSectionCopy"
+      creates: "section-copy.md"
+    - agent: lp-design-architect
+      action: "selectDesignSystem"
+      creates: "ds-selection.md"
+    - agent: lp-design-architect
+      action: "defineDesignTokens"
+      creates: "design-tokens.md"
+    - agent: lp-design-architect
+      action: "createAtomicComponents"
+      creates: "component-specs.md"
+    - agent: lp-design-architect
+      action: "designSections"
+      creates: "section-layouts.md"
+    - agent: lp-image-creator
+      action: "generateHeroImage"
+      creates: "hero-image"
+    - agent: lp-image-creator
+      action: "generateSectionImages"
+      creates: "section-images"
+
+  key_commands:
+    - "*start-content-design"
+
+  trigger_threshold: 2
+  typical_duration: "25-40 minutes"
+
+  success_indicators:
+    - "All section copy written"
+    - "Design system complete with light/dark tokens"
+    - "WCAG AAA contrast verified"
+    - "Hero + section images generated"
+
+  notes:
+    - "Copy and Design run in parallel fan-out pattern"
+    - "Image generation waits for BOTH branches to complete before starting"
+    - "Merge point validates consistency between copy tone and design language"
+
+  transitions:
+    copy_stream:
+      trigger: "Research deliverables available; copywriter begins writing all section copy"
+      confidence: 0.88
+      greeting_message: "Iniciando stream de copy. Quill escreve copy para todas as seções em paralelo com design..."
+      next_steps:
+        - command: "*write-all-copy"
+          description: "Quill escreve copy para cada seção usando framework escolhido (AIDA/PAS/BAB)"
+          priority: 1
+
+    design_stream:
+      trigger: "Research deliverables available; design architect begins design system creation"
+      confidence: 0.88
+      greeting_message: "Iniciando stream de design. Prism cria design system atômico em paralelo com copy..."
+      next_steps:
+        - command: "*create-design-system"
+          description: "Prism cria design tokens, componentes e variantes light/dark"
+          priority: 1
+
+    content_design_merged:
+      trigger: "Both copy and design streams completed; deliverables validated for consistency"
+      confidence: 0.85
+      greeting_message: "Copy e design system finalizados e validados. Merge concluído. Iniciando geração de imagens..."
+      next_steps:
+        - command: "*generate-images"
+          description: "Lens gera imagens baseadas no copy finalizado e design system"
+          priority: 1
+
+    images_generated:
+      trigger: "All required images generated matching design system palette and copy context"
+      confidence: 0.87
+      greeting_message: "Imagens geradas com coerência visual e contextual. Content + Design + Images prontos para build."
+      next_steps:
+        - command: "*start-build"
+          description: "Avançar para build do frontend e backend"
+          priority: 1

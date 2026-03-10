@@ -1,0 +1,120 @@
+workflow_name: lp_section_pipeline
+description: "Micro-workflow por seção: copy → design → imagem → código, repetido para cada seção da landing page"
+
+agent_sequence:
+  - lp-copywriter
+  - lp-design-architect
+  - lp-image-creator
+  - lp-frontend-dev
+
+success_indicators:
+  - "Section renders in light/dark"
+  - "Copy follows chosen framework"
+  - "Image coherent with design system"
+  - "WCAG AAA contrast"
+
+workflow:
+  id: lp-section-pipeline
+  name: "LP Section Pipeline"
+  description: "Micro-workflow por seção: copy → design → imagem → código, repetido para cada seção da landing page"
+  type: loop
+
+  sequence:
+    - agent: lp-copywriter
+      action: "writeSectionCopy"
+      creates: "section-copy.md"
+    - agent: lp-design-architect
+      action: "designSections"
+      creates: "section-layout.md"
+    - agent: lp-image-creator
+      action: "generateSectionImages"
+      creates: "section-image"
+    - agent: lp-frontend-dev
+      action: "buildSection"
+      creates: "section-component"
+
+  key_commands:
+    - "*build-section"
+
+  trigger_threshold: 2
+  typical_duration: "8-15 minutes per section"
+
+  success_indicators:
+    - "Section renders in light/dark"
+    - "Copy follows chosen framework"
+    - "Image coherent with design system"
+    - "WCAG AAA contrast"
+
+  notes:
+    - "Loops through each section in order: navigation, hero, social-proof, problem-agitation, solution-demo, testimonials, benefits, features, pricing, faq, final-cta, footer"
+    - "Some sections skip image generation (navigation, faq, footer)"
+    - "Each iteration produces a complete, tested section component"
+    - "Section order may vary based on chosen copy framework (AIDA/PAS/BAB)"
+
+  section_list:
+    - navigation
+    - hero
+    - social-proof
+    - problem-agitation
+    - solution-demo
+    - testimonials
+    - benefits
+    - features
+    - pricing
+    - faq
+    - final-cta
+    - footer
+
+  sections_skip_image:
+    - navigation
+    - faq
+    - footer
+
+  transitions:
+    copy_written:
+      trigger: "Copywriter delivers section-specific copy following the chosen framework"
+      confidence: 0.88
+      greeting_message: "Copy da seção escrito. Encaminhando para design da seção..."
+      next_steps:
+        - command: "*design-section"
+          description: "Prism define layout, espaçamento e variantes light/dark para a seção"
+          priority: 1
+
+    section_designed:
+      trigger: "Design architect delivers section layout with spacing, typography, and color specs"
+      confidence: 0.87
+      greeting_message: "Design da seção definido. Verificando necessidade de imagem..."
+      next_steps:
+        - command: "*generate-section-image"
+          description: "Lens gera imagem para a seção (se aplicável)"
+          priority: 1
+
+    image_generated:
+      trigger: "Section image generated or skipped (for sections in skip list)"
+      confidence: 0.85
+      greeting_message: "Imagem da seção pronta (ou dispensada). Construindo componente..."
+      next_steps:
+        - command: "*code-section"
+          description: "Pixel implementa a seção como componente Next.js com A11y"
+          priority: 1
+
+    section_built:
+      trigger: "Section component implemented, rendering correctly in light/dark modes"
+      confidence: 0.88
+      greeting_message: "Seção construída e renderizando corretamente em light/dark."
+      next_steps:
+        - command: "*verify-section"
+          description: "Verificar contraste WCAG AAA e responsividade da seção"
+          priority: 1
+
+    next_section_or_complete:
+      trigger: "Current section verified; check if more sections remain in the list"
+      confidence: 0.90
+      greeting_message: "Seção verificada. Avançando para próxima seção ou finalizando loop..."
+      next_steps:
+        - command: "*build-section"
+          description: "Iniciar próxima seção no loop (se houver)"
+          priority: 1
+        - command: "*assemble-page"
+          description: "Todas as seções completas — montar página final"
+          priority: 2
