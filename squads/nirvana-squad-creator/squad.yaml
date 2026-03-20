@@ -60,9 +60,6 @@ triggers:
     preview: true
     live: true
     summary: true
-    format: all
-    a2ui:
-      port: 3001
 
 config:
   extends: none

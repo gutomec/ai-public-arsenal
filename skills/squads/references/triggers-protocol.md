@@ -2,13 +2,13 @@
 
 ## O que são Triggers
 
-Triggers são notificações de lifecycle que o Squad Manager emite quando squads, agentes e tasks iniciam e terminam. São **opt-in** por squad via `squad.yaml` — squads sem a seção `triggers` ou com `triggers.enabled: false` não emitem nenhum trigger.
+Triggers são notificações de lifecycle que o Squad Manager emite quando squads, agentes e tasks iniciam e terminam. São **ON por padrão** — squads sem a seção `triggers` emitem markers normalmente. Para desabilitar, defina `triggers.enabled: false` explicitamente.
 
 ## Configuração no squad.yaml
 
 ```yaml
 triggers:
-  enabled: true                    # false ou ausente = desabilitado
+  enabled: true                    # default: true (omitir = habilitado, false = desabilita)
   display: inline                  # inline | log | both
   metrics: context-delta           # context-delta | char-estimate | both
   events:
@@ -132,8 +132,8 @@ echo '{"type":"squad-start","squad":"brandcraft","prefix":"bc","timestamp":"2026
 
 ## Como o Squad Manager Executa Triggers
 
-1. **Ler `squad.yaml`** — verificar `triggers.enabled === true`
-2. **Verificar `events`** — emitir apenas os tipos habilitados
+1. **Ler `squad.yaml`** — verificar se `triggers.enabled` é explicitamente `false`. Se ausente ou `true` → emitir
+2. **Verificar `events`** — se `events` ausente, emitir todos os tipos. Se presente, emitir apenas os habilitados
 3. **No início da ativação:**
    - Registrar timestamp de início
    - Se `events.squad: true` → emitir marker `squad-start`

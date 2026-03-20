@@ -14,14 +14,13 @@ Before creating any files, gather these requirements:
 | Author? | YES | "Your Name" |
 | Dependencies (npm/python)? | NO | `puppeteer@^23.0.0` |
 | MCP tools needed? | NO | `browser`, `filesystem` |
-| Habilitar triggers? | NO | `true` (lifecycle events) |
-| Habilitar flow tracking? | NO | terminal (ASCII), browser (A2UI), ou ambos |
+| Desabilitar triggers? | NO | `false` (triggers são ON por padrão) |
 
 If the user provides incomplete info, ask targeted questions. Never create a squad without at minimum: name, purpose, agents, and prefix.
 
-If the user wants triggers, add the `triggers` section ao `squad.yaml` (see `triggers-protocol.md` for full spec).
+**Triggers are ON by default.** Do NOT add a `triggers` section unless the user explicitly asks to customize display mode, metrics, or disable them. Omitting the section = all triggers enabled with defaults (inline display, all events, flow tracking on).
 
-If the user wants flow tracking (rastreamento visual de delegação entre agents), add `triggers.flow` section ao `squad.yaml`. Perguntar: "Deseja habilitar flow tracking? Opções: terminal (ASCII), browser (A2UI), ou ambos." See `flow-tracker-protocol.md` for full spec.
+If the user explicitly asks to disable triggers, add: `triggers: { enabled: false }` to squad.yaml.
 
 ## Phase 2: Naming
 

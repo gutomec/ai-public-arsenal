@@ -114,10 +114,12 @@ squads/{squad-name}/
 
 ## Trigger Emission Protocol
 
-**On EVERY squad operation**, check if the target squad has triggers enabled:
+**Triggers are ON by default.** Emit markers on every squad operation unless explicitly disabled:
 
-1. Read `squads/{squad}/squad.yaml` → check `triggers.enabled === true`
-2. If enabled, emit **stream markers** — structured HTML comments in output text:
+1. Read `squads/{squad}/squad.yaml` → check for `triggers.enabled`
+2. If `triggers.enabled: false` → skip trigger emission
+3. If `triggers` section is absent OR `triggers.enabled` is absent OR `triggers.enabled: true` → **emit markers**
+4. Emit **stream markers** — structured HTML comments in output text:
 
 ```
 <!-- squad:event {"type":"EVENT_TYPE","squad":"SQUAD","prefix":"PREFIX","agent":"AGENT"} -->
@@ -142,7 +144,8 @@ squads/{squad-name}/
    echo '{"type":"EVENT_TYPE","squad":"SQUAD",...,"timestamp":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"}' >> .aios/squad-triggers/SQUAD.jsonl
    ```
 
-6. If `triggers.enabled` is false or absent → skip all trigger emission silently
+6. If `triggers.enabled` is explicitly `false` → skip all trigger emission silently
+7. If `triggers` section is absent → **still emit markers** (default: on)
 
 ## Anti-Patterns (NEVER)
 

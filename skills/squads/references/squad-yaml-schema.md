@@ -71,9 +71,9 @@ See `dependency-management.md` for full install/check protocols.
 ## Triggers (Optional)
 
 ```yaml
-# ─── TRIGGERS (OPTIONAL) ───
+# ─── TRIGGERS (ON BY DEFAULT) ───
 triggers:
-  enabled: true                    # false ou ausente = desabilitado
+  enabled: true                    # default: true — omitir seção inteira = habilitado
   display: inline                  # inline | log | both
   metrics: context-delta           # context-delta | char-estimate | both
   events:
@@ -83,7 +83,7 @@ triggers:
   logPath: ".aios/squad-triggers/" # path para log file (se display=log|both)
 ```
 
-**Se `triggers` ausente ou `triggers.enabled: false` → NENHUM trigger.** Squads existentes continuam inalterados.
+**Triggers são ON por padrão.** Omitir a seção `triggers` = habilitado com defaults. Para desabilitar: `triggers.enabled: false`.
 
 **Mecanismo de emissão:** Stream markers — HTML comments estruturados no output de texto:
 ```
