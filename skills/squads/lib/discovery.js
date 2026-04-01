@@ -12,6 +12,7 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const yaml = require('yaml');
+const { SquadDisplayFormatter } = require('./display-formatter');
 
 class SquadDiscovery {
   /**
@@ -243,49 +244,13 @@ class SquadDiscovery {
   }
 
   /**
-   * Format squads for display
+   * Format squads for display with multiple styles
+   * @param {Array} squads - Array of squad objects
+   * @param {string} style - Display style: 'table' (default), 'card', 'compact', 'tree'
+   * @param {Object} options - Formatting options (sortBy, reverse, etc)
    */
-  static formatSquads(squads) {
-    if (squads.length === 0) {
-      return `
-⚠️  No squads found
-
-Searched:
-  • ./squads/
-  • ~/squads/
-
-Getting started:
-  1. Create first squad: *create-squad my-first-squad
-  2. Or import squads: cp -r /path/to/squads/* ~/squads/
-
-For debugging:
-  *list-squads --debug
-`;
-    }
-
-    // Group by location
-    const local = squads.filter(s => s.location === 'local');
-    const home = squads.filter(s => s.location === 'home');
-
-    let output = `✅ Found ${squads.length} squads\n`;
-
-    if (local.length > 0) {
-      output += `\n📂 Local Workspace (./squads/):\n`;
-      local.forEach(s => {
-        const hasHarness = s.harness ? ' [v3]' : '';
-        output += `  • ${s.name} (v${s.version}, ${s.agents} agents, ${s.workflows} workflows)${hasHarness}\n`;
-      });
-    }
-
-    if (home.length > 0) {
-      output += `\n🏠 Home Directory (~/squads/):\n`;
-      home.forEach(s => {
-        const hasHarness = s.harness ? ' [v3]' : '';
-        output += `  • ${s.name} (v${s.version}, ${s.agents} agents, ${s.workflows} workflows)${hasHarness}\n`;
-      });
-    }
-
-    return output;
+  static formatSquads(squads, style = 'table', options = {}) {
+    return SquadDisplayFormatter.format(squads, style, options);
   }
 }
 
