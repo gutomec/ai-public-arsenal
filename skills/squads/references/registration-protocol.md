@@ -1,5 +1,7 @@
 # Registration Protocol — Squad Activation
 
+Resolve squad source paths by checking `./squads/{squad-name}` first, then `~/squads/{squad-name}`. If both exist, use the workspace-local squad.
+
 Registration makes squad agents accessible via slash commands (`/SQUADS:{name}:{agent-id}`).
 
 ## Register a Squad
@@ -15,7 +17,7 @@ mkdir -p .claude/squads/{squad-name}/agents/
 Copy each agent `.md` file from the squad source to the registration directory:
 
 ```bash
-cp squads/{squad-name}/agents/{prefix}-{role}.md .claude/squads/{squad-name}/agents/
+cp {resolved-squad-root}/{squad-name}/agents/{prefix}-{role}.md .claude/squads/{squad-name}/agents/
 ```
 
 Repeat for every agent listed in `squad.yaml` → `components.agents`.
@@ -29,7 +31,7 @@ mkdir -p .claude/commands/SQUADS/{squad-name}/
 Copy or symlink each agent file:
 
 ```bash
-cp squads/{squad-name}/agents/{prefix}-{role}.md .claude/commands/SQUADS/{squad-name}/
+cp {resolved-squad-root}/{squad-name}/agents/{prefix}-{role}.md .claude/commands/SQUADS/{squad-name}/
 ```
 
 This enables `/SQUADS:{squad-name}:{agent-id}` slash command activation.
@@ -80,7 +82,7 @@ After registration, verify:
 
 ## Notes
 
-- Registration does NOT modify the squad source files in `squads/`
+- Registration does NOT modify the squad source files under `./squads/` or `~/squads/`
 - Registration only creates copies/links in `.claude/` directories
-- Unregistration only removes `.claude/` entries, leaving `squads/` intact
+- Unregistration only removes `.claude/` entries, leaving squad source directories intact
 - A squad must pass validation before registration (see `validation-checklist.md`)

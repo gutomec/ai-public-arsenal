@@ -1,78 +1,123 @@
-# Validation Checklist — 26 Integrity Checks
+# Validation Checklist — 36 Integrity Checks (v2)
 
-Run these checks against a squad to verify integrity before registration.
+Run these checks against a squad to verify integrity before registration or execution.
 
-## Blocking Checks (MUST pass)
+Resolve `{resolved-squad-root}` by checking `./squads/{name}` first, then `~/squads/{name}`. For cross-squad checks, inspect both `./squads/*` and `~/squads/*`, preferring the local squad on name collisions.
 
-| # | Check | How to Verify |
-|---|-------|---------------|
-| 1 | `squad.yaml` exists and is valid YAML | `Read squads/{name}/squad.yaml` — must parse without errors |
-| 2 | `name` is kebab-case | `Grep "^name:" squads/{name}/squad.yaml` — verify matches `^[a-z][a-z0-9-]*$` |
-| 3 | `version` follows semver | `Grep "^version:" squads/{name}/squad.yaml` — verify matches `^\d+\.\d+\.\d+$` |
-| 4 | `slashPrefix` is unique | `Grep "slashPrefix:" squads/*/squad.yaml` — no duplicates |
-| 5 | All `components.agents` files exist | For each agent in list: `Glob squads/{name}/agents/{agent}.md` |
-| 6 | All `components.tasks` files exist | For each task in list: `Glob squads/{name}/tasks/{task}.md` |
-| 7 | All agent IDs start with prefix | `Grep "id:" squads/{name}/agents/*.md` — each must start with `{prefix}-` |
-| 8 | Registration in `.claude/squads/` complete | `Glob .claude/squads/{name}/agents/*.md` — count matches agents list |
-| 9 | Registration in `.claude/commands/SQUADS/` complete | `Glob .claude/commands/SQUADS/{name}/*.md` — count matches agents list |
-
-## Advisory Checks (SHOULD pass)
+## Blocking Checks (MUST pass) — 9 original
 
 | # | Check | How to Verify |
-|---|-------|---------------|
-| 10 | `config/coding-standards.md` exists | `Glob squads/{name}/config/coding-standards.md` |
-| 11 | `config/tech-stack.md` exists | `Glob squads/{name}/config/tech-stack.md` |
-| 12 | Agent collaboration documented | `Grep "Receives From\|Hands Off To" squads/{name}/agents/*.md` — each agent has both |
-| 13 | `README.md` exists | `Glob squads/{name}/README.md` |
-| 14 | Task naming follows convention | Each task file matches `{prefix}-{role}-{verb}-{noun}.md` pattern |
-| 15 | No naming conflicts with existing squads | `Grep "slashPrefix:" squads/*/squad.yaml` — verify unique prefix and agent IDs |
-| 16 | Node deps declared → `package.json` exists | If `dependencies.node` non-empty: `Glob squads/{name}/package.json` |
-| 17 | Node deps declared → `pnpm-lock.yaml` exists | If `dependencies.node` non-empty: `Glob squads/{name}/pnpm-lock.yaml` |
-| 18 | Python deps declared → `pyproject.toml` exists | If `dependencies.python` non-empty: `Glob squads/{name}/pyproject.toml` |
-| 19 | Python deps declared → `uv.lock` exists | If `dependencies.python` non-empty: `Glob squads/{name}/uv.lock` |
-| 20 | Squad deps declared → squads exist | For each in `dependencies.squads`: `Glob squads/{dep}/squad.yaml` |
-| 21 | Se `triggers.enabled`, `display` é válido (`inline`\|`log`\|`both`) | `Grep "display:" squads/{name}/squad.yaml` — verify matches valid value | Advisory |
-| 22 | Se `triggers.enabled`, `events` tem pelo menos um tipo `true` | Check `events.squad`, `events.agent`, or `events.task` is true | Advisory |
-| 23 | Se `triggers.logPath` definido, path é válido | Verify path string is non-empty and doesn't contain invalid chars | Advisory |
-| 24 | Se `triggers.flow.enabled`, squad tem pelo menos 1 workflow | Check `components.workflows` is non-empty | Advisory |
-| 25 | Se `triggers.flow.enabled`, `live`/`preview`/`summary` são booleans | Verify values are true or false | Advisory |
-| 26 | Se `triggers.display: log\|both`, logPath é definido | Verify logPath string is non-empty | Advisory |
+|---|---|---|
+| 1 | `squad.yaml` exists and is valid YAML | `Read {resolved-squad-root}/{name}/squad.yaml` — must parse without errors |
+| 2 | `name` is kebab-case | Verify matches `^[a-z][a-z0-9-]*$` |
+| 3 | `version` follows semver | Verify matches `^\d+\.\d+\.\d+$` |
+| 4 | `slashPrefix` is unique | `Grep "slashPrefix:" ./squads/*/squad.yaml ~/squads/*/squad.yaml` — prefer `./squads/{name}` on collisions, no duplicates after resolution |
+| 5 | All `components.agents` files exist | `Glob {resolved-squad-root}/{name}/agents/{agent}.md` |
+| 6 | All `components.tasks` files exist | `Glob {resolved-squad-root}/{name}/tasks/{task}.md` |
+| 7 | All agent IDs start with prefix | `Grep "id:" {resolved-squad-root}/{name}/agents/*.md` — each must start with `{prefix}-` |
+| 8 | Registration in `.claude/squads/` complete | Agent files match count |
+| 9 | Registration in `.claude/commands/SQUADS/` complete | Command files match count |
+
+## Blocking Checks (v2) — 5 new
+
+**These checks only apply when the v2 feature is present.** If a squad has no `components.schemas`, no `validation.schema` in workflows, and no `human-gate` steps, checks 10-14 are **automatically PASS** (vacuously true). v1 squads pass all 14 blocking checks without changes.
+
+| # | Check | How to Verify | When to run |
+|---|---|---|---|
+| 10 | All `components.schemas` files exist | `Glob {resolved-squad-root}/{name}/schemas/{schema}.json` for each | Only if `components.schemas` is declared in squad.yaml |
+| 11 | Schema files are valid JSON | `Bash(node -e 'JSON.parse(require("fs").readFileSync("FILE"))')` for each | Only if schema files exist (check 10 triggered) |
+| 12 | Workflow validation.schema refs exist | For each `validation.schema` in workflow: verify file exists | Only if workflow has `validation.schema` fields |
+| 13 | Workflow creates.schema refs exist | For each `creates.schema` in workflow: verify file exists | Only if workflow has `creates.schema` fields |
+| 14 | Human gate IDs are unique | No duplicate `id` across human-gate steps within a workflow | Only if workflow has `human-gate` type steps |
+
+## Advisory Checks (SHOULD pass) — 17 original
+
+| # | Check | How to Verify |
+|---|---|---|
+| 15 | `config/coding-standards.md` exists | `Glob {resolved-squad-root}/{name}/config/coding-standards.md` |
+| 16 | `config/tech-stack.md` exists | `Glob {resolved-squad-root}/{name}/config/tech-stack.md` |
+| 17 | Agent collaboration documented | `Grep "Receives From\|Hands Off To" {resolved-squad-root}/{name}/agents/*.md` |
+| 18 | `README.md` exists | `Glob {resolved-squad-root}/{name}/README.md` |
+| 19 | Task naming follows convention | Each task matches `{prefix}-{role}-{verb}-{noun}.md` |
+| 20 | No naming conflicts | Unique prefix and agent IDs across squads |
+| 21 | Node deps declared → `package.json` exists | If non-empty: check file exists |
+| 22 | Node deps declared → `pnpm-lock.yaml` exists | If non-empty: check file exists |
+| 23 | Python deps declared → `pyproject.toml` exists | If non-empty: check file exists |
+| 24 | Python deps declared → `uv.lock` exists | If non-empty: check file exists |
+| 25 | Squad deps declared → squads exist | For each in `dependencies.squads`: check squad exists |
+| 26 | Triggers display is valid | `inline` | `log` | `both` |
+| 27 | Triggers events has at least one true | At least one event type enabled |
+| 28 | Triggers logPath is valid | Non-empty string if display is log/both |
+| 29 | Flow tracking has workflow | If `flow.enabled`, squad has ≥1 workflow |
+| 30 | Flow tracking booleans valid | `live`/`preview`/`summary` are booleans |
+| 31 | Log display has logPath | If display is log/both, logPath is defined |
+
+## Advisory Checks (v2) — 5 new
+
+| # | Check | How to Verify |
+|---|---|---|
+| 32 | Validation assertions are valid JS | Parse each assertion as JavaScript expression (dry-run eval) |
+| 33 | Template files exist | For each `creates.template` in workflow: file exists in `templates/` |
+| 34 | Template placeholders match fields | Template `{{fields}}` match `Saida.fields` in task |
+| 35 | Model strategy uses known models | Model names match known providers (advisory — new models appear often) |
+| 36 | State config has valid storage type | `state.storage` is `file` (only supported value currently) |
 
 ## Execution Protocol
 
 1. Read `squad.yaml` and parse all fields
-2. Run blocking checks 1-9 in order — stop on first failure
-3. Run advisory checks 10-26 — collect warnings
+2. Run blocking checks 1-14 in order — stop on first failure
+3. Run advisory checks 15-36 — collect warnings
 4. Report results:
 
 ```
-## Validation Report: {squad-name}
+## Validation Report: {squad-name} (v2)
 
-### Blocking (9 checks)
+### Blocking (14 checks)
 - [x] squad.yaml exists and valid
 - [x] name is kebab-case
+- [x] All schemas exist and are valid JSON
+- [x] Workflow schema references resolve
 - ...
 
-### Advisory (17 checks)
+### Advisory (22 checks)
 - [x] coding-standards.md exists
-- [ ] ⚠ Agent collaboration not documented in {agent}
-- [ ] ⚠ Node deps declared but package.json missing
+- [x] Validation assertions parse correctly
+- [ ] ⚠ Template placeholders don't match task fields
+- [ ] ⚠ Agent model "gpt-5-turbo" not in known models list
 - ...
+
+### v2 Feature Summary
+- Validation Gates: {N} steps with validation
+- State Persistence: {enabled/disabled}
+- Human Gates: {N} human-gate steps
+- Schemas: {N} schema files
+- Templates: {N} template files
+- Model Routing: {configured/default}
+- Context Budget: {N} agents with budget
 
 ### Result: {PASS | FAIL}
 {Blocking failures: N | Advisory warnings: N}
 ```
 
-## Common Failures
+## Common v2 Failures
 
 | Failure | Fix |
-|---------|-----|
-| Agent file missing | Create `squads/{name}/agents/{prefix}-{role}.md` with proper schema |
-| Task file missing | Create `squads/{name}/tasks/{prefix}-{role}-{verb}-{noun}.md` |
-| Wrong agent ID prefix | Rename agent ID in frontmatter to start with `{prefix}-` |
-| Duplicate slashPrefix | Change prefix in `squad.yaml` and rename all agent/task IDs |
-| Registration incomplete | Run `*register-squad {name}` to copy files to `.claude/` |
-| Node deps declared, no `package.json` | Run `*install-squad-deps {name}` to generate manifest and install |
-| Python deps declared, no `pyproject.toml` | Run `*install-squad-deps {name}` to generate manifest and install |
-| Lock file missing | Deps declared but never installed — run `*install-squad-deps {name}` |
-| Squad dependency not found | Create or install the referenced squad first |
+|---|---|
+| Schema file missing | Create `schemas/{name}.json` with proper JSON Schema |
+| Schema not valid JSON | Fix JSON syntax in schema file |
+| Workflow refs non-existent schema | Create the schema or fix the path |
+| Duplicate human-gate ID | Rename one of the duplicate IDs |
+| Assertion is not valid JavaScript | Fix syntax — assertions must be eval-able expressions |
+| Template file missing | Create `templates/{name}.md` with `{{field}}` placeholders |
+| Unknown model name | Update to a valid model identifier or ignore (advisory) |
+
+## Upgrade Validation
+
+When running `*upgrade-squad` from v1 to v2, additionally check:
+
+| Check | Action |
+|---|---|
+| `schemas/` directory exists | Create if missing |
+| `.squad-state` in `.gitignore` | Add if missing |
+| `state` section in squad.yaml | Add with defaults if user opts in |
+| `ajv` in dependencies | Suggest adding if validation gates are used |

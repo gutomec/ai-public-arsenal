@@ -1,4 +1,6 @@
-# Triggers Protocol — Squad Lifecycle Events
+# Triggers Protocol — Squad Lifecycle Events (v2 Extended)
+
+Resolve squad source paths by checking `./squads/{name}` first, then `~/squads/{name}`. If both exist, use the workspace-local squad.
 
 ## O que são Triggers
 
@@ -107,6 +109,43 @@ Triggers são emitidos como **HTML comments estruturados** no output de texto do
 <!-- squad:event {"type":"squad-end","squad":"brandcraft","prefix":"bc","totalDuration":"15m 30s","tasksExecuted":8} -->
 ```
 
+### v2 Events
+
+#### validation-pass
+```
+<!-- squad:event {"type":"validation-pass","squad":"brandcraft","prefix":"bc","agent":"bc-extractor","step":0,"schema":"PASS","assertions_passed":2,"assertions_total":2} -->
+```
+
+#### validation-fail
+```
+<!-- squad:event {"type":"validation-fail","squad":"brandcraft","prefix":"bc","agent":"bc-extractor","step":0,"errors":["output.items is undefined"],"retry_count":1,"max_retries":3} -->
+```
+
+#### checkpoint-saved
+```
+<!-- squad:event {"type":"checkpoint-saved","squad":"brandcraft","prefix":"bc","agent":"bc-extractor","step":0,"checkpoint":"step-000-bc-extractor.json","run_id":"550e8400..."} -->
+```
+
+#### human-gate-start
+```
+<!-- squad:event {"type":"human-gate-start","squad":"brandcraft","prefix":"bc","gate_id":"client-review","questions":3} -->
+```
+
+#### human-gate-complete
+```
+<!-- squad:event {"type":"human-gate-complete","squad":"brandcraft","prefix":"bc","gate_id":"client-review","duration":"3m 15s"} -->
+```
+
+#### workflow-resumed
+```
+<!-- squad:event {"type":"workflow-resumed","squad":"brandcraft","prefix":"bc","run_id":"550e8400...","resume_step":3,"total_steps":5} -->
+```
+
+#### model-routed
+```
+<!-- squad:event {"type":"model-routed","squad":"brandcraft","prefix":"bc","agent":"bc-extractor","model":"gemini-3-flash","reason":"model_strategy.workers"} -->
+```
+
 ### Campos de Flow
 
 Quando `triggers.flow.enabled: true`, os eventos incluem campos adicionais de delegação:
@@ -158,8 +197,8 @@ Parsear `<!-- squad:event {...} -->` do output de texto do Claude. Mais confiáv
 
 ### 2. Tool call patterns (inferência)
 Detectar padrões de tool calls no stream-json:
-- `Read squads/X/squad.yaml` → squad ativado
-- `Read squads/X/agents/*.md` → agent lido
+- `Read {resolved-squad-root}/X/squad.yaml` → squad ativado
+- `Read {resolved-squad-root}/X/agents/*.md` → agent lido
 - Sequência de `Read agents/A.md` → `Read agents/B.md` → transição A→B
 - `subagent` / `squad_dispatch` → delegação explícita
 

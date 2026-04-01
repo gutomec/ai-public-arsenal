@@ -1,40 +1,34 @@
-# Squad YAML Schema — Complete Reference
+# Squad YAML Schema — v3 Complete Reference
 
 ## Required Fields
 
 ```yaml
 name: "{squad-name}"             # kebab-case, unique (REQUIRED)
-version: "1.0.0"                 # Semantic versioning (REQUIRED)
+version: "3.0.0"                 # Semantic versioning (REQUIRED)
 description: "{description}"     # Purpose of the squad (REQUIRED)
 author: "{author}"               # Creator name (REQUIRED)
 license: MIT                     # MIT, Apache-2.0, ISC, UNLICENSED (REQUIRED)
 slashPrefix: "{prefix}"          # Short activation prefix, 2-4 chars (REQUIRED)
 ```
 
-## Optional: AIOS Integration
-
-```yaml
-aios:                            # OPTIONAL — only if using AIOS framework
-  minVersion: "2.1.0"
-  type: squad
-```
-
 ## Components
 
 ```yaml
 components:
-  agents:                        # Agent definition files
+  agents:
     - "{prefix}-{role}.md"
-  tasks:                         # Task definition files
+  tasks:
     - "{prefix}-{role}-{verb}-{noun}.md"
-  workflows:                     # Workflow YAML files
+  workflows:
     - "{workflow-name}.yaml"
-  checklists:                    # Validation checklists
+  schemas:                       # JSON Schema files (v2+)
+    - "{artifact}.json"
+  checklists:
     - "{checklist-name}.md"
-  templates:                     # Reusable templates
+  templates:
     - "{template-name}.md"
-  tools: []                      # Custom tools
-  scripts:                       # Utility scripts
+  tools: []
+  scripts:
     - "{script}.js"
 ```
 
@@ -48,143 +42,248 @@ config:
   source-tree: config/source-tree.md
 ```
 
+## State Management (v2+)
+
+```yaml
+state:
+  enabled: true
+  storage: file                  # file (default) — future: sqlite, supabase
+  checkpoint_dir: ".squad-state"
+  resume: true
+  retention: 10                  # Keep last N runs (0 = keep all)
+```
+
+## Model Strategy (v2+)
+
+```yaml
+model_strategy:
+  orchestrator: "claude-sonnet-4"    # Planning/reasoning model
+  workers: "gemini-flash"            # Execution/worker model
+  reviewers: "claude-sonnet-4"       # Review/verification model
+  override: true                     # Allow per-agent override
+```
+
+## Harness (v3 — NEW)
+
+```yaml
+harness:
+  doom_loop:
+    enabled: true
+    max_identical_outputs: 3
+    similarity_threshold: 0.95
+    max_step_retries: 5
+    on_detect: abort               # abort | escalate | change-strategy
+    cooldown_seconds: 0
+
+  ralph_loop:
+    enabled: true
+    max_iterations: 5
+    persist_state: true
+
+  context_compaction:
+    enabled: true
+    strategy: key-fields           # truncate | key-fields | summarize
+    max_handoff_tokens: 4000
+    preserve_schema_fields: true
+
+  filesystem_collaboration:
+    enabled: true
+    artifact_dir: artifacts
+    cleanup: on_complete           # on_complete | manual | never
+
+  traces:
+    enabled: true
+    level: standard                # minimal | standard | verbose
+    include_outputs: false
+
+  self_verify:
+    default_enabled: true
+
+  diminishing_returns:
+    enabled: true
+    min_new_info_ratio: 0.10
+    consecutive_waves: 2
+    coverage_threshold: 85
+    on_detect: stop
+
+  artifact_lifecycle:
+    enabled: true
+    states: [draft, pending_validation, validated, approved, rejected, consumed, superseded, archived]
+    require_validation: true
+
+  quality_framework:
+    enabled: true
+    threshold: 7.0
+    dimensions:
+      accuracy: { weight: 1.0, threshold: 7.0, veto: true }
+      coherence: { weight: 0.9, threshold: 6.0, veto: false }
+      strategic_alignment: { weight: 0.9, threshold: 6.0, veto: false }
+      operational_excellence: { weight: 0.8, threshold: 6.0, veto: false }
+      innovation_capacity: { weight: 0.7, threshold: 5.0, veto: false }
+      risk_management: { weight: 0.8, threshold: 6.0, veto: false }
+      resource_optimization: { weight: 0.8, threshold: 6.0, veto: false }
+      stakeholder_value: { weight: 0.7, threshold: 5.0, veto: false }
+      adaptability: { weight: 0.6, threshold: 5.0, veto: false }
+      sustainability: { weight: 0.5, threshold: 4.0, veto: false }
+
+  middleware: []
+```
+
+See `harness-protocol.md` for detailed documentation of each harness feature.
+
 ## Dependencies
 
 ```yaml
 dependencies:
-  node:                          # pnpm — generates package.json + pnpm-lock.yaml
-    - "puppeteer@^23.0.0"
-  python:                        # uv — generates pyproject.toml + uv.lock
-    - "requests>=2.31.0"
-  system: []                     # OS-level (documentation only, no auto-install)
-  squads: []                     # Other squads this depends on
-  mcp-tools: []                  # MCP tools required by the squad
-  go: []                         # Go modules (reserved — future)
-  rust: []                       # Cargo packages (reserved — future)
+  node:
+    - "ajv@^8.0.0"              # Required for v3 validation
+    - "ajv-formats@^3.0.0"
+  python: []
+  squads: []
 ```
-
-**Generated files (committed to git):** `package.json`, `pnpm-lock.yaml`, `pyproject.toml`, `uv.lock`, `squad-lock.json`.
-**Ignored (NOT committed):** `node_modules/`, `.venv/`, `vendor/`, `target/`.
-
-See `dependency-management.md` for full install/check protocols.
 
 ## Triggers (Optional)
 
 ```yaml
-# ─── TRIGGERS (ON BY DEFAULT) ───
 triggers:
-  enabled: true                    # default: true — omitir seção inteira = habilitado
-  display: inline                  # inline | log | both
-  metrics: context-delta           # context-delta | char-estimate | both
+  enabled: true
+  display: inline                # inline | log | both
   events:
-    squad: true                    # trigger no start/end do squad
-    agent: true                    # trigger no start/end de cada agent
-    task: true                     # trigger no start/end de cada task
-  logPath: ".aios/squad-triggers/" # path para log file (se display=log|both)
+    squad: true
+    agent: true
+    task: true
+    validation: true             # v2+
+    checkpoint: true             # v2+
+    human_gate: true             # v2+
+    doom_loop: true              # v3 NEW
+    ralph_loop: true             # v3 NEW
+    artifact: true               # v3 NEW
+    trace: true                  # v3 NEW
+  logPath: ".aios/squad-triggers/"
+  flow:
+    enabled: true
+    live: true
+    preview: true
+    summary: true
 ```
 
-**Triggers são ON por padrão.** Omitir a seção `triggers` = habilitado com defaults. Para desabilitar: `triggers.enabled: false`.
-
-**Mecanismo de emissão:** Stream markers — HTML comments estruturados no output de texto:
-```
-<!-- squad:event {"type":"squad-start","squad":"my-squad","prefix":"ms","version":"1.0.0"} -->
-```
-Funciona em QUALQUER plataforma. Frontends inteligentes parseiam em UIs ricas. Outros ignoram.
-
-See `triggers-protocol.md` for full trigger format, stream marker spec, and execution protocol.
-
-### Flow Tracking (Optional)
+## Tags
 
 ```yaml
-triggers:
-  # ... campos base acima ...
-  flow:                              # Flow tracking (opcional)
-    enabled: true                    # Habilita rastreamento de fluxo de delegação
-    live: true                       # Emite transições em tempo real
-    preview: true                    # Gera preview antes de executar
-    summary: true                    # Gera summary ao final
-```
-
-| Campo | Tipo | Default | Descrição |
-|-------|------|---------|-----------|
-| `flow.enabled` | boolean | `false` | Habilita flow tracking |
-| `flow.live` | boolean | `true` | Emite transições em tempo real |
-| `flow.preview` | boolean | `true` | Gera mapa planejado antes de executar |
-| `flow.summary` | boolean | `true` | Gera diagrama completo ao final |
-
-**Se `triggers.flow` ausente ou `flow.enabled: false` → triggers normais sem flow tracking.**
-
-See `flow-tracker-protocol.md` for full event schema, terminal renderer, and frontend detection guide.
-
-## Optional Sections
-
-```yaml
-mcpTools:                        # MCP tool requirements
-  required:
-    - "{tool}": "{why required}"
-  optional:
-    - "{tool}": "{nice to have}"
-
-documentFormats:                 # Custom document formats
-  - name: "{format-name}"
-    dimensions: "{WxH or standard}"
-    technology: "{HTML|PPTX|etc}"
-
-videoFormats:                    # Custom video formats
-  - name: "{format-name}"
-    dimensions: "{WxH}"
-    fps: 30
-    technology: "{Remotion|FFmpeg|etc}"
-
-tags:                            # Metadata tags
+tags:
   - "{domain}"
   - "{capability}"
+  - "v3"                         # Tag to indicate v3 features
+  - "harness"                    # Indicates harness engineering
 ```
 
-## Complete Minimal Example
+## Complete v3 Example
 
 ```yaml
-name: "my-squad"
-version: "1.0.0"
-description: "A squad for doing X"
+name: "security-audit-squad"
+version: "3.0.0"
+description: "Multi-agent security audit with harness-engineered validation, doom loop protection, and execution traces"
 author: "Your Name"
 license: MIT
-slashPrefix: "ms"
+slashPrefix: "sas"
 
 components:
   agents:
-    - "ms-leader.md"
-    - "ms-worker.md"
+    - "sas-scanner.md"
+    - "sas-analyzer.md"
+    - "sas-reporter.md"
   tasks:
-    - "ms-leader-plan-work.md"
-    - "ms-worker-execute-task.md"
+    - "sas-scanner-scan-code.md"
+    - "sas-analyzer-analyze-findings.md"
+    - "sas-reporter-write-report.md"
   workflows:
-    - "main-pipeline.yaml"
+    - "full-audit.yaml"
+  schemas:
+    - "scan-results.json"
+    - "analysis.json"
+    - "report.json"
   checklists: []
-  templates: []
+  templates:
+    - "security-report.md"
   tools: []
   scripts: []
 
 config:
   extends: none
-  coding-standards: config/coding-standards.md
-  tech-stack: config/tech-stack.md
+
+state:
+  enabled: true
+  storage: file
+  resume: true
+  retention: 10
+
+model_strategy:
+  orchestrator: "claude-sonnet-4"
+  workers: "gemini-flash"
+  reviewers: "claude-sonnet-4"
+  override: true
+
+harness:
+  doom_loop:
+    enabled: true
+    max_identical_outputs: 3
+    on_detect: abort
+  ralph_loop:
+    enabled: true
+    max_iterations: 5
+  context_compaction:
+    enabled: true
+    strategy: key-fields
+    max_handoff_tokens: 4000
+  filesystem_collaboration:
+    enabled: true
+    artifact_dir: artifacts
+  traces:
+    enabled: true
+    level: standard
+  self_verify:
+    default_enabled: true
 
 dependencies:
-  node: []
+  node:
+    - "ajv@^8.0.0"
+    - "ajv-formats@^3.0.0"
   python: []
   squads: []
 
 tags:
-  - "automation"
+  - "security"
+  - "audit"
+  - "v3"
+  - "harness"
 ```
+
+## Version Compatibility
+
+| Feature | v1 | v2 | v3 |
+|---|---|---|---|
+| `name`, `version`, `description`, `slashPrefix` | ✅ | ✅ | ✅ |
+| `components.agents/tasks/workflows` | ✅ | ✅ | ✅ |
+| `components.schemas` | ❌ | ✅ | ✅ |
+| `state` | ❌ | ✅ | ✅ |
+| `model_strategy` | ❌ | ✅ | ✅ |
+| `harness` | ❌ | ❌ | ✅ |
+| `triggers.events.doom_loop` | ❌ | ❌ | ✅ |
+| `triggers.events.ralph_loop` | ❌ | ❌ | ✅ |
+| `triggers.events.artifact` | ❌ | ❌ | ✅ |
+| `triggers.events.trace` | ❌ | ❌ | ✅ |
+| `harness.diminishing_returns` | ❌ | ❌ | ✅ |
+| `harness.artifact_lifecycle` | ❌ | ❌ | ✅ |
+| `harness.quality_framework` | ❌ | ❌ | ✅ |
 
 ## Naming Rules
 
 | Element | Pattern | Example |
-|---------|---------|---------|
-| Squad name | `kebab-case` | `brandcraft`, `my-squad` |
-| Slash prefix | 2-4 lowercase chars | `bc`, `ms`, `nsc` |
-| Agent ID | `{prefix}-{role}` | `bc-renderer`, `ms-leader` |
-| Task ID | `{prefix}-{agent-role}-{verb}-{noun}.md` | `bc-renderer-create-html.md` |
-| Workflow | `{descriptive-name}.yaml` | `main-pipeline.yaml` |
+|---|---|---|
+| Squad name | `kebab-case` | `security-audit-squad` |
+| Slash prefix | 2-4 lowercase chars | `sas` |
+| Agent ID | `{prefix}-{role}` | `sas-scanner` |
+| Task ID | `{prefix}-{agent-role}-{verb}-{noun}.md` | `sas-scanner-scan-code.md` |
+| Workflow | `{descriptive-name}.yaml` | `full-audit.yaml` |
+| Schema | `{artifact-name}.json` | `scan-results.json` |
+| Template | `{output-name}.md` or `.json` | `security-report.md` |

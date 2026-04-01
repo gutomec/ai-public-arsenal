@@ -216,3 +216,4 @@ Checks dependency status **without installing anything**:
 | Version mismatch | Lock file outdated | Delete lock file and reinstall |
 | Squad dep not found | Referenced squad missing | Create or install the dependency squad first |
 | `node_modules/` in git | `.gitignore` not configured | Add `squads/**/node_modules/` to `.gitignore` |
+Resolve squad paths by checking `./squads/{name}` first, then `~/squads/{name}`. For dependency discovery across squads, inspect both roots and prefer `./squads/{name}` when names collide.

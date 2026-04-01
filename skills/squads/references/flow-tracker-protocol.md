@@ -145,10 +145,10 @@ Mesmo sem markers, o frontend vê tool calls do Claude no stream-json:
 
 | Tool Call | Inferência |
 |---|---|
-| `Read squads/X/squad.yaml` | Squad X ativado — extrair nome/versão do resultado |
-| `Read squads/X/agents/A.md` | Agent A iniciado |
-| `Read squads/X/agents/B.md` (após A) | Transição A → B |
-| `Read squads/X/workflows/W.yaml` | Workflow W ativo — extrair nodes/edges |
+| `Read {resolved-squad-root}/X/squad.yaml` | Squad X ativado — extrair nome/versão do resultado |
+| `Read {resolved-squad-root}/X/agents/A.md` | Agent A iniciado |
+| `Read {resolved-squad-root}/X/agents/B.md` (após A) | Transição A → B |
+| `Read {resolved-squad-root}/X/workflows/W.yaml` | Workflow W ativo — extrair nodes/edges |
 | `subagent` com agent=A | Delegação explícita para A |
 | `Bash`/`Write`/`Edit` | Task execution no agente atual |
 
@@ -176,3 +176,4 @@ O Flow Tracker valida que:
 | `*flow-preview {squad} {workflow}` | Mostra mapa planejado (ASCII + markers) |
 | `*flow-summary {squad}` | Mostra diagrama do último fluxo executado |
 | `*flow-live {squad}` | Habilita/desabilita tracking em tempo real |
+Resolve squad source paths by checking `./squads/{name}` first, then `~/squads/{name}`. If both exist, use the workspace-local squad.
