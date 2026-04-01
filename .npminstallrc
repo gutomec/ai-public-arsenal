@@ -1,0 +1,18 @@
+# NPM Install Configuration
+# This ensures ai-public-arsenal always installs from GitHub (single source of truth)
+
+# GitHub is the authoritative source
+GITHUB_REGISTRY=https://github.com/gutomec/ai-public-arsenal
+
+# Installation instructions
+# Direct from GitHub (always latest):
+#   npm install github:gutomec/ai-public-arsenal
+#   npm install gutomec/ai-public-arsenal
+#
+# Via skills CLI (recommended):
+#   npx skills add gutomec/ai-public-arsenal@squads
+#
+# Via npm registry (recommended after publishing):
+#   npm install @gutomec/ai-public-arsenal
+
+# Note: GitHub is the primary source. NPM registry is a mirror that syncs automatically.

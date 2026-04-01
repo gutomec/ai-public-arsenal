@@ -1,0 +1,58 @@
+{
+  "name": "@gutomec/ai-public-arsenal",
+  "version": "3.0.0",
+  "description": "Open-source skills, squads, and agents for AI coding assistants — installable via skills.sh. Squad Manager v3 with doom loop detection, Ralph loop retry, real validation, filesystem collaboration, execution traces, reasoning sandwich model routing, DAG workflows, self-verify steps, and dual-path discovery (./squads + ~/squads).",
+  "author": "Luiz Gustavo Vieira Rodrigues <gutomec@yahoo.com.br> (https://github.com/gutomec)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gutomec/ai-public-arsenal.git"
+  },
+  "homepage": "https://github.com/gutomec/ai-public-arsenal#readme",
+  "bugs": {
+    "url": "https://github.com/gutomec/ai-public-arsenal/issues"
+  },
+  "keywords": [
+    "ai",
+    "agents",
+    "claude-code",
+    "squads",
+    "skills",
+    "multi-agent",
+    "orchestration",
+    "ai-coding-assistants",
+    "harness-engineering",
+    "doom-loop-detection",
+    "ralph-loop-retry"
+  ],
+  "main": "index.js",
+  "exports": {
+    "./squads": "./skills/squads/SKILL.md",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "skills/",
+    "squads/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "publish:npm": "npm publish --access public",
+    "version": "git add -A && git commit -m 'chore: bump version to %s'",
+    "postpublish": "git push && git push --tags"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "metadata": {
+    "source": "GitHub (single source of truth)",
+    "installCommand": "npm install @gutomec/ai-public-arsenal",
+    "skillInstall": "npx skills add @gutomec/ai-public-arsenal@squads",
+    "githubUrl": "https://github.com/gutomec/ai-public-arsenal",
+    "note": "This package always installs from GitHub. npm is a registry redirector only. GitHub is the single source of truth for all updates."
+  }
+}
