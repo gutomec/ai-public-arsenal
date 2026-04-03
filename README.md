@@ -90,42 +90,17 @@ The `squads` skill is built around [SQUAD_PROTOCOL.md](skills/squads/SQUAD_PROTO
 
 ## Structure
 
-```
-ai-public-arsenal/
-├── skills/
-│   └── squads/
-│       ├── SKILL.md                     # Skill definition (entry point)
-│       ├── SQUAD_PROTOCOL.md            # Protocol specification (source of truth)
-│       ├── references/                  # Protocol documentation
-│       │   ├── 01-discovery.md
-│       │   ├── 02-creation.md
-│       │   ├── 03-validation.md
-│       │   ├── 04-activation.md
-│       │   ├── 05-schemas.md
-│       │   ├── 06-workflows.md
-│       │   ├── 07-execution.md
-│       │   ├── 08-harness.md
-│       │   ├── 09-upgrade.md
-│       │   └── 10-context-engineering.md
-│       ├── schemas/                     # JSON Schema definitions
-│       │   ├── agent-schema.json
-│       │   ├── squad-schema.json
-│       │   └── task-schema.json
-│       ├── templates/                   # Scaffolding templates
-│       │   ├── agent.yaml.tmpl
-│       │   ├── squad.yaml.tmpl
-│       │   ├── task.md.tmpl
-│       │   └── workflow.yaml.tmpl
-│       ├── scripts/                     # Utility scripts
-│       │   ├── activate-squad.sh
-│       │   └── validate-squad.sh
-│       └── lib/                         # Helper modules
-│           ├── discovery.js
-│           └── display-formatter.js
-├── package.json
-├── INSTALLATION.md
-└── README.md
-```
+Everything lives under `skills/squads/`:
+
+| Path | What | Files |
+|---|---|---|
+| [`SKILL.md`](skills/squads/SKILL.md) | Skill entry point | 1 |
+| [`SQUAD_PROTOCOL.md`](skills/squads/SQUAD_PROTOCOL.md) | Protocol specification (source of truth) | 1 |
+| [`references/`](skills/squads/references/) | Protocol docs (discovery → context-engineering) | 10 |
+| [`schemas/`](skills/squads/schemas/) | JSON Schema for agent, squad, task | 3 |
+| [`templates/`](skills/squads/templates/) | Scaffolding for new squads | 4 |
+| [`scripts/`](skills/squads/scripts/) | Shell utilities (activate, validate) | 2 |
+| [`lib/`](skills/squads/lib/) | JS helpers (discovery, display) | 2 |
 
 ## Squad Lifecycle Triggers
 
