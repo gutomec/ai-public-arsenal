@@ -1,0 +1,61 @@
+---
+templates: []
+tools:
+  - bash
+  - grep
+  - read
+  - write
+  - edit
+checklists: []
+---
+
+# Task: {{task-name}}
+
+## Task Definition
+- **name:** {{taskName}}
+- **responsavel:** @{{agent-id}}
+- **responsavel_type:** Agente
+- **atomic_layer:** {{layer}}
+
+## Inputs
+| Campo | Tipo | Origem | Obrigatorio | Default |
+|-------|------|--------|-------------|---------|
+| {{input_name}} | string | user | true | — |
+
+## Steps
+
+### Step 1: {{STEP_1_NAME}}
+- **action:** {{describe action}}
+- **validation:** {{how to verify}}
+- **onFailure:** halt
+
+### Step 2: {{STEP_2_NAME}}
+- **action:** {{describe action}}
+- **validation:** {{how to verify}}
+- **onFailure:** retry
+
+### Step 3: {{STEP_3_NAME}}
+- **action:** {{describe action}}
+- **validation:** {{how to verify}}
+- **onFailure:** escalate
+
+## Outputs
+| Campo | Tipo | Destino | Persistido |
+|-------|------|---------|-----------|
+| {{output_name}} | file | {{path}} | true |
+
+## Checklist
+- [ ] All inputs validated
+- [ ] All steps completed
+- [ ] Output meets acceptance criteria
+- [ ] No regressions introduced
+
+## Execution Modes
+- **yolo:** Execute all steps autonomously (0-1 prompts)
+- **interactive:** Confirm each step with user (5-10 prompts)
+- **preflight:** Show full plan before execution
+
+## Error Handling
+- **onFailure:** halt | retry | skip | escalate
+- **maxRetries:** 3
+- **escalateTo:** human

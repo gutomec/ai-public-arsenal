@@ -1,0 +1,281 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://squads.dev/schemas/agent-schema.json",
+  "title": "Agent Definition Schema",
+  "description": "JSON Schema for agent YAML files. Based on SQUAD_PROTOCOL.md Section 5.1.",
+  "type": "object",
+  "required": ["agent", "persona"],
+  "properties": {
+    "agent": {
+      "type": "object",
+      "description": "Core agent identification and metadata.",
+      "required": ["name", "id", "title", "icon", "whenToUse"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Unique agent name within the squad. Lowercase with hyphens.",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "id": {
+          "type": "string",
+          "description": "Unique agent identifier. Format: {squad-prefix}-{role}.",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "title": {
+          "type": "string",
+          "description": "Human-readable display title for the agent."
+        },
+        "icon": {
+          "type": "string",
+          "description": "Emoji or icon representing the agent."
+        },
+        "whenToUse": {
+          "type": "string",
+          "description": "Clear description of when this agent should be invoked."
+        },
+        "version": {
+          "type": "string",
+          "description": "Agent definition version.",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "persona": {
+      "type": "object",
+      "description": "Agent personality and behavioral configuration.",
+      "required": ["role", "style", "identity", "focus"],
+      "properties": {
+        "role": {
+          "type": "string",
+          "description": "The agent's functional role (e.g., orchestrator, engineer, reviewer, designer)."
+        },
+        "style": {
+          "type": "string",
+          "description": "Communication and work style (e.g., concise, verbose, analytical, creative)."
+        },
+        "identity": {
+          "type": "string",
+          "description": "First-person identity statement that shapes the agent's self-concept."
+        },
+        "focus": {
+          "type": "string",
+          "description": "Primary area of focus and expertise."
+        },
+        "core_principles": {
+          "type": "array",
+          "description": "Guiding principles the agent follows in all decisions.",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "commands": {
+      "type": "array",
+      "description": "Slash commands this agent exposes.",
+      "items": {
+        "type": "object",
+        "required": ["name", "description"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Command name (without slash prefix)."
+          },
+          "description": {
+            "type": "string",
+            "description": "What the command does."
+          },
+          "arguments": {
+            "type": "array",
+            "description": "Command arguments.",
+            "items": {
+              "type": "object",
+              "required": ["name"],
+              "properties": {
+                "name": { "type": "string" },
+                "description": { "type": "string" },
+                "required": { "type": "boolean", "default": false },
+                "type": { "type": "string", "default": "string" }
+              },
+              "additionalProperties": false
+            }
+          },
+          "examples": {
+            "type": "array",
+            "description": "Usage examples.",
+            "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "IDE-FILE-RESOLUTION": {
+      "type": "object",
+      "description": "File resolution rules for IDE integration.",
+      "properties": {
+        "patterns": {
+          "type": "array",
+          "description": "Glob patterns this agent handles.",
+          "items": { "type": "string" }
+        },
+        "excludes": {
+          "type": "array",
+          "description": "Glob patterns this agent ignores.",
+          "items": { "type": "string" }
+        },
+        "priority": {
+          "type": "integer",
+          "description": "Resolution priority (higher wins).",
+          "default": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "REQUEST-RESOLUTION": {
+      "type": "object",
+      "description": "Request routing rules — when to auto-select this agent.",
+      "properties": {
+        "keywords": {
+          "type": "array",
+          "description": "Keywords that trigger this agent.",
+          "items": { "type": "string" }
+        },
+        "fileTypes": {
+          "type": "array",
+          "description": "File extensions this agent specializes in.",
+          "items": { "type": "string" }
+        },
+        "priority": {
+          "type": "integer",
+          "description": "Routing priority (higher wins).",
+          "default": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "activation-instructions": {
+      "type": "string",
+      "description": "Instructions loaded when the agent is activated. Markdown-formatted prompt content."
+    },
+    "persona_profile": {
+      "type": "object",
+      "description": "Extended persona profile for advanced agent personalization.",
+      "properties": {
+        "expertise": {
+          "type": "array",
+          "description": "Areas of expertise.",
+          "items": { "type": "string" }
+        },
+        "communication": {
+          "type": "object",
+          "properties": {
+            "tone": { "type": "string" },
+            "verbosity": { "type": "string", "enum": ["minimal", "concise", "normal", "verbose", "detailed"] },
+            "format_preference": { "type": "string", "enum": ["markdown", "plain", "structured", "conversational"] }
+          },
+          "additionalProperties": false
+        },
+        "decision_framework": {
+          "type": "string",
+          "description": "How the agent makes decisions when facing trade-offs."
+        }
+      },
+      "additionalProperties": true
+    },
+    "core_principles": {
+      "type": "array",
+      "description": "Top-level core principles (alternative to persona.core_principles).",
+      "items": { "type": "string" }
+    },
+    "dependencies": {
+      "type": "object",
+      "description": "Agent-specific dependencies.",
+      "properties": {
+        "tools": {
+          "type": "array",
+          "description": "CLI tools this agent requires.",
+          "items": { "type": "string" }
+        },
+        "mcps": {
+          "type": "array",
+          "description": "MCP servers this agent requires.",
+          "items": { "type": "string" }
+        },
+        "agents": {
+          "type": "array",
+          "description": "Other agents this agent can delegate to.",
+          "items": { "type": "string" }
+        },
+        "skills": {
+          "type": "array",
+          "description": "Skills this agent depends on.",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "develop-story": {
+      "type": "object",
+      "description": "Development story and context for the agent's creation.",
+      "properties": {
+        "motivation": {
+          "type": "string",
+          "description": "Why this agent was created."
+        },
+        "constraints": {
+          "type": "array",
+          "description": "Design constraints applied during development.",
+          "items": { "type": "string" }
+        },
+        "changelog": {
+          "type": "array",
+          "description": "Version history entries.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "version": { "type": "string" },
+              "date": { "type": "string", "format": "date" },
+              "changes": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "autoClaude": {
+      "type": "object",
+      "description": "Autonomous execution configuration for Claude Code integration.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether this agent can be invoked autonomously.",
+          "default": false
+        },
+        "maxTurns": {
+          "type": "integer",
+          "description": "Maximum conversation turns in autonomous mode.",
+          "minimum": 1,
+          "default": 10
+        },
+        "allowedTools": {
+          "type": "array",
+          "description": "Tools the agent is allowed to use in autonomous mode.",
+          "items": { "type": "string" }
+        },
+        "model": {
+          "type": "string",
+          "description": "Preferred model for autonomous execution."
+        },
+        "temperature": {
+          "type": "number",
+          "description": "Temperature setting for autonomous execution.",
+          "minimum": 0,
+          "maximum": 2
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

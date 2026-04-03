@@ -1,0 +1,349 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://squads.dev/schemas/squad-schema.json",
+  "title": "Squad Manifest Schema",
+  "description": "JSON Schema for squad.yaml — the squad manifest file. Based on SQUAD_PROTOCOL.md Section 4.1.",
+  "type": "object",
+  "required": ["name", "version"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Unique squad identifier. Lowercase, alphanumeric with hyphens.",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version of the squad.",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "short-title": {
+      "type": "string",
+      "description": "Short display title for the squad.",
+      "maxLength": 60
+    },
+    "description": {
+      "type": "string",
+      "description": "Full description of the squad's purpose and capabilities."
+    },
+    "author": {
+      "type": "string",
+      "description": "Author or organization name."
+    },
+    "license": {
+      "type": "string",
+      "description": "License identifier (e.g., MIT, Apache-2.0, proprietary)."
+    },
+    "slashPrefix": {
+      "type": "string",
+      "description": "Prefix for slash commands registered by this squad.",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "runtime": {
+      "type": "object",
+      "description": "Runtime environment configuration.",
+      "properties": {
+        "engine": {
+          "type": "string",
+          "description": "Primary runtime engine.",
+          "enum": ["node", "python", "shell", "hybrid"]
+        },
+        "node": {
+          "type": "string",
+          "description": "Required Node.js version (semver range).",
+          "pattern": "^[><=~^]?\\d+"
+        },
+        "python": {
+          "type": "string",
+          "description": "Required Python version (semver range).",
+          "pattern": "^[><=~^]?\\d+"
+        }
+      },
+      "additionalProperties": false
+    },
+    "requires": {
+      "type": "object",
+      "description": "External requirements and capabilities needed.",
+      "properties": {
+        "tools": {
+          "type": "array",
+          "description": "List of CLI tools required (e.g., git, docker, npm).",
+          "items": { "type": "string" }
+        },
+        "mcps": {
+          "type": "array",
+          "description": "List of MCP servers required.",
+          "items": { "type": "string" }
+        },
+        "skills": {
+          "type": "array",
+          "description": "List of skills this squad depends on.",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "tags": {
+      "type": "array",
+      "description": "Categorization tags for discovery and filtering.",
+      "items": { "type": "string" }
+    },
+    "components": {
+      "type": "object",
+      "description": "Squad component declarations.",
+      "properties": {
+        "agents": {
+          "type": "array",
+          "description": "List of agent definitions.",
+          "items": {
+            "type": "object",
+            "required": ["id", "role", "file"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Unique agent identifier within the squad."
+              },
+              "role": {
+                "type": "string",
+                "description": "Agent role (e.g., orchestrator, engineer, reviewer)."
+              },
+              "file": {
+                "type": "string",
+                "description": "Path to agent definition file relative to squad root."
+              },
+              "title": {
+                "type": "string",
+                "description": "Human-readable agent title."
+              },
+              "icon": {
+                "type": "string",
+                "description": "Emoji or icon for the agent."
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "tasks": {
+          "type": "array",
+          "description": "List of task definitions.",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "file"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Unique task identifier within the squad."
+              },
+              "name": {
+                "type": "string",
+                "description": "Human-readable task name."
+              },
+              "file": {
+                "type": "string",
+                "description": "Path to task definition file relative to squad root."
+              },
+              "agent": {
+                "type": "string",
+                "description": "Default agent ID responsible for this task."
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "workflows": {
+          "type": "array",
+          "description": "List of workflow definitions.",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "file"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Unique workflow identifier within the squad."
+              },
+              "name": {
+                "type": "string",
+                "description": "Human-readable workflow name."
+              },
+              "file": {
+                "type": "string",
+                "description": "Path to workflow definition file relative to squad root."
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "scripts": {
+      "type": "object",
+      "description": "Lifecycle scripts executed at specific phases.",
+      "properties": {
+        "preActivate": {
+          "type": "string",
+          "description": "Command to run before activation."
+        },
+        "postActivate": {
+          "type": "string",
+          "description": "Command to run after activation."
+        },
+        "preRun": {
+          "type": "string",
+          "description": "Command to run before workflow execution."
+        },
+        "postRun": {
+          "type": "string",
+          "description": "Command to run after workflow execution."
+        },
+        "validate": {
+          "type": "string",
+          "description": "Custom validation script."
+        },
+        "build": {
+          "type": "string",
+          "description": "Build script for squad assets."
+        },
+        "test": {
+          "type": "string",
+          "description": "Test script for squad validation."
+        }
+      },
+      "additionalProperties": true
+    },
+    "config": {
+      "type": "object",
+      "description": "Squad-level configuration parameters.",
+      "properties": {
+        "maxConcurrentAgents": {
+          "type": "integer",
+          "description": "Maximum number of agents that can run concurrently.",
+          "minimum": 1,
+          "default": 3
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "description": "Default timeout for task execution in milliseconds.",
+          "minimum": 1000,
+          "default": 300000
+        },
+        "retryPolicy": {
+          "type": "object",
+          "properties": {
+            "maxRetries": { "type": "integer", "minimum": 0, "default": 3 },
+            "backoffMs": { "type": "integer", "minimum": 100, "default": 1000 },
+            "backoffMultiplier": { "type": "number", "minimum": 1, "default": 2 }
+          },
+          "additionalProperties": false
+        },
+        "harness": {
+          "type": "object",
+          "description": "Harness engineering configuration (v3+ feature, opt-in).",
+          "properties": {
+            "enabled": { "type": "boolean", "default": false },
+            "doomLoopDetection": { "type": "boolean", "default": true },
+            "maxDoomLoopIterations": { "type": "integer", "minimum": 1, "default": 3 },
+            "selfVerify": { "type": "boolean", "default": true },
+            "traces": { "type": "boolean", "default": true },
+            "contextCompaction": { "type": "boolean", "default": false }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": true
+    },
+    "dependencies": {
+      "type": "object",
+      "description": "External package dependencies.",
+      "properties": {
+        "node": {
+          "type": "object",
+          "description": "Node.js packages (name → semver).",
+          "additionalProperties": { "type": "string" }
+        },
+        "python": {
+          "type": "object",
+          "description": "Python packages (name → version spec).",
+          "additionalProperties": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "mcps": {
+      "type": "array",
+      "description": "MCP server configurations used by this squad.",
+      "items": {
+        "type": "object",
+        "required": ["name", "command"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "MCP server identifier."
+          },
+          "command": {
+            "type": "string",
+            "description": "Command to start the MCP server."
+          },
+          "args": {
+            "type": "array",
+            "description": "Arguments for the MCP server command.",
+            "items": { "type": "string" }
+          },
+          "env": {
+            "type": "object",
+            "description": "Environment variables for the MCP server.",
+            "additionalProperties": { "type": "string" }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "integration": {
+      "type": "object",
+      "description": "External integration configuration.",
+      "properties": {
+        "ci": {
+          "type": "object",
+          "description": "CI/CD integration settings.",
+          "properties": {
+            "provider": { "type": "string", "enum": ["github-actions", "gitlab-ci", "circleci", "jenkins", "custom"] },
+            "configFile": { "type": "string" }
+          },
+          "additionalProperties": true
+        },
+        "notifications": {
+          "type": "object",
+          "description": "Notification integration settings.",
+          "properties": {
+            "slack": {
+              "type": "object",
+              "properties": {
+                "webhook": { "type": "string" },
+                "channel": { "type": "string" }
+              },
+              "additionalProperties": false
+            },
+            "discord": {
+              "type": "object",
+              "properties": {
+                "webhook": { "type": "string" }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": true
+        },
+        "artifacts": {
+          "type": "object",
+          "description": "Artifact storage configuration.",
+          "properties": {
+            "outputDir": { "type": "string", "default": ".artifacts" },
+            "retentionDays": { "type": "integer", "minimum": 1, "default": 30 }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}
