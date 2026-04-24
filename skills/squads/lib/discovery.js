@@ -1,11 +1,14 @@
 /**
- * Squad Discovery Engine — Bulletproof Implementation
+ * Squad Discovery Engine v4.0 — Runtime-Agnostic
  *
  * PRIMARY METHOD: Bash find (handles tilde expansion natively)
  * FALLBACK: Directory traversal (Node.js fs)
  *
- * Problem solved: Glob tool cannot expand ~ before pattern matching
- * Solution: Use Bash find for discovery instead of Glob
+ * v4 additions:
+ * - Protocol version detection (v4/v3.1/v2)
+ * - runtime_requirements parsing
+ * - features_required/optional parsing
+ * - Version classification for display
  */
 
 const { execSync } = require('child_process');
@@ -36,33 +39,24 @@ class SquadDiscovery {
   static discoverLocation(location, locationType) {
     const expandedPath = this.expandPath(location);
 
-    // Quick check: directory exists and is readable
-    if (!this.dirExists(expandedPath)) {
-      return [];
-    }
-
+    if (!this.dirExists(expandedPath)) return [];
     if (!this.isReadable(expandedPath)) {
       console.warn(`[WARN] Directory not readable: ${expandedPath}`);
       return [];
     }
 
     try {
-      // PRIMARY METHOD: Bash find (bulletproof)
       return this.discoverViaBashFind(expandedPath, locationType);
     } catch (error) {
       console.warn(`[WARN] Bash find failed, falling back to traversal: ${error.message}`);
-      // FALLBACK: Directory traversal
       return this.discoverViaTraversal(expandedPath, locationType);
     }
   }
 
   /**
    * PRIMARY DISCOVERY: Bash find
-   * Why: Handles tilde expansion, fast, reliable
    */
   static discoverViaBashFind(dir, locationType) {
-    // Command: find DIR -maxdepth 2 -name squad.yaml -type f
-    // Why -maxdepth 2: squad.yaml is always at {dir}/{squad-name}/squad.yaml
     const cmd = `find "${dir}" -maxdepth 2 -name "squad.yaml" -type f 2>/dev/null`;
 
     let output;
@@ -72,18 +66,14 @@ class SquadDiscovery {
       throw new Error(`Bash find failed: ${error.message}`);
     }
 
-    const paths = output
-      .trim()
-      .split('\n')
-      .filter(line => line.length > 0);
-
+    const paths = output.trim().split('\n').filter(line => line.length > 0);
     const squads = [];
+
     for (const squadPath of paths) {
       try {
         const info = this.loadSquadInfo(squadPath, locationType);
         squads.push(info);
       } catch (err) {
-        // Log but continue — don't fail entire discovery on one bad squad
         console.warn(`[WARN] Failed to parse ${squadPath}: ${err.message}`);
       }
     }
@@ -93,7 +83,6 @@ class SquadDiscovery {
 
   /**
    * FALLBACK DISCOVERY: Directory traversal
-   * Used if bash find fails (rare)
    */
   static discoverViaTraversal(dir, locationType) {
     const squads = [];
@@ -102,15 +91,10 @@ class SquadDiscovery {
       const entries = fs.readdirSync(dir, { withFileTypes: true });
 
       for (const entry of entries) {
-        // Skip files, hidden dirs, and non-directories
-        if (!entry.isDirectory() || entry.name.startsWith('.')) {
-          continue;
-        }
+        if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
 
         const squadYamlPath = path.join(dir, entry.name, 'squad.yaml');
-        if (!fs.existsSync(squadYamlPath)) {
-          continue;
-        }
+        if (!fs.existsSync(squadYamlPath)) continue;
 
         try {
           const info = this.loadSquadInfo(squadYamlPath, locationType);
@@ -127,8 +111,7 @@ class SquadDiscovery {
   }
 
   /**
-   * LAZY LOADING: Parse only essential metadata
-   * Full parse happens only on inspect/run
+   * LAZY LOADING: Parse essential metadata + v4 fields
    */
   static loadSquadInfo(yamlPath, location) {
     const content = fs.readFileSync(yamlPath, 'utf-8');
@@ -140,115 +123,146 @@ class SquadDiscovery {
       throw new Error(`Invalid YAML: ${error.message}`);
     }
 
-    // Validate required fields
     if (!parsed.name || !parsed.version) {
       throw new Error('Missing required fields: name, version');
     }
 
-    // Count agents, workflows, tasks
-    // Support both "agents/workflows/tasks" and "components.agents" formats
     const agents = this.countItems(parsed, 'agents');
     const workflows = this.countItems(parsed, 'workflows');
     const tasks = this.countItems(parsed, 'tasks');
 
+    // v4: Detect protocol version
+    const protocolVersion = this.detectProtocolVersion(parsed, yamlPath);
+
+    // v4: Parse runtime requirements
+    const runtimes = this.parseRuntimes(parsed);
+
+    // v4: Parse features
+    const featuresRequired = parsed.features_required || [];
+    const featuresOptional = parsed.features_optional || [];
+
     return {
       name: parsed.name,
       version: parsed.version,
+      protocol: protocolVersion,
       description: parsed.description || '(no description)',
       location,
       path: path.dirname(yamlPath),
       agents,
       workflows,
       tasks,
-      harness: !!parsed.harness, // v3 indicator
+      runtimes,
+      featuresRequired,
+      featuresOptional,
+      harness: !!parsed.harness,
     };
   }
 
   /**
-   * Count items in squad.yaml (agents, workflows, tasks)
-   * Supports multiple formats
+   * Detect protocol version from manifest and agent files
+   * Returns: '4.0' | '3.1' | '2.0-cc' | '2.0-legacy' | 'unknown'
+   */
+  static detectProtocolVersion(parsed, yamlPath) {
+    // Explicit declaration (v4+)
+    if (parsed.protocol) return parsed.protocol;
+
+    // Check for v4 indicators
+    if (parsed.runtime_requirements || parsed.features_required) return '4.0';
+
+    // Check for v3 indicators (harness block)
+    if (parsed.harness) return '3.x';
+
+    // Check agent files for format detection
+    const squadDir = path.dirname(yamlPath);
+    const agentFiles = this.getComponentFiles(parsed, 'agents');
+
+    for (const agentFile of agentFiles.slice(0, 1)) {
+      try {
+        const agentPath = path.join(squadDir, agentFile);
+        if (!fs.existsSync(agentPath)) continue;
+
+        const agentContent = fs.readFileSync(agentPath, 'utf-8');
+        // Check for nested agent: block (legacy v2)
+        if (agentContent.includes('agent:') && agentContent.includes('persona:')) {
+          return '2.0-legacy';
+        }
+        // Check for flat name: + description: (v2 CC or v4)
+        if (agentContent.includes('name:') && agentContent.includes('description:')) {
+          // v4 has mandatory maxTurns
+          if (agentContent.includes('maxTurns:')) return '4.0';
+          return '2.0-cc';
+        }
+      } catch (e) {
+        // Ignore parse errors during detection
+      }
+    }
+
+    return '2.0';
+  }
+
+  /**
+   * Parse runtime requirements from squad manifest
+   */
+  static parseRuntimes(parsed) {
+    if (!parsed.runtime_requirements) return [];
+
+    const runtimes = [];
+    const rr = parsed.runtime_requirements;
+
+    if (Array.isArray(rr.minimum)) {
+      rr.minimum.forEach(r => runtimes.push({ runtime: r.runtime, type: 'minimum' }));
+    }
+    if (Array.isArray(rr.compatible)) {
+      rr.compatible.forEach(r => runtimes.push({ runtime: r.runtime, type: 'compatible' }));
+    }
+
+    return runtimes;
+  }
+
+  /**
+   * Get component file paths from manifest (supports both v4 string arrays and legacy objects)
+   */
+  static getComponentFiles(parsed, type) {
+    const items = parsed[type] || (parsed.components && parsed.components[type]) || [];
+    return items.map(item => typeof item === 'string' ? item : (item.file || ''));
+  }
+
+  /**
+   * Count items in squad.yaml
    */
   static countItems(parsed, type) {
-    // Try direct format: agents: [], workflows: [], tasks: []
-    if (Array.isArray(parsed[type])) {
-      return parsed[type].length;
-    }
-
-    // Try components format: components: { agents: [], workflows: [], tasks: [] }
-    if (parsed.components && Array.isArray(parsed.components[type])) {
-      return parsed.components[type].length;
-    }
-
+    if (Array.isArray(parsed[type])) return parsed[type].length;
+    if (parsed.components && Array.isArray(parsed.components[type])) return parsed.components[type].length;
     return 0;
   }
 
   /**
-   * Merge results with precedence: local > home
+   * Merge with precedence: local > home
    */
   static mergeAndDeduplicate(localSquads, homeSquads) {
     const byName = new Map();
-
-    // Add home squads first (lower priority)
     homeSquads.forEach(s => byName.set(s.name, s));
-
-    // Override with local squads (higher priority)
     localSquads.forEach(s => byName.set(s.name, s));
-
-    // Return sorted by name
-    return Array.from(byName.values()).sort((a, b) =>
-      a.name.localeCompare(b.name)
-    );
+    return Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  /**
-   * Path expansion: handle ~, ./, etc.
-   */
   static expandPath(p) {
     if (p.startsWith('~')) {
       const home = process.env.HOME;
-      if (!home) {
-        throw new Error('HOME environment variable not set');
-      }
+      if (!home) throw new Error('HOME environment variable not set');
       return p.replace('~', home);
-    }
-    if (p.startsWith('./') || p.startsWith('../')) {
-      return path.resolve(p);
-    }
-    if (p.startsWith('/')) {
-      return p;
     }
     return path.resolve(p);
   }
 
-  /**
-   * Check if directory exists
-   */
   static dirExists(p) {
-    try {
-      return fs.statSync(p).isDirectory();
-    } catch {
-      return false;
-    }
+    try { return fs.statSync(p).isDirectory(); } catch { return false; }
   }
 
-  /**
-   * Check if directory is readable
-   */
   static isReadable(p) {
-    try {
-      fs.accessSync(p, fs.constants.R_OK);
-      return true;
-    } catch {
-      return false;
-    }
+    try { fs.accessSync(p, fs.constants.R_OK); return true; } catch { return false; }
   }
 
-  /**
-   * Format squads for display with multiple styles
-   * @param {Array} squads - Array of squad objects
-   * @param {string} style - Display style: 'table' (default), 'card', 'compact', 'tree'
-   * @param {Object} options - Formatting options (sortBy, reverse, etc)
-   */
   static formatSquads(squads, style = 'table', options = {}) {
     return SquadDisplayFormatter.format(squads, style, options);
   }

@@ -1,9 +1,21 @@
-# Squad Protocol Specification
+# Squad Protocol Specification (v2.0.0 — SUPERSEDED)
+
+> ## ⚠️ Deprecation Notice
+>
+> **This document has been superseded by [`SQUAD_PROTOCOL_V4.md`](SQUAD_PROTOCOL_V4.md).**
+>
+> v2.0.0 is preserved here for reference and for squads that have not yet migrated. v4.0 harnesses accept v2.0 squads via a legacy shim (see [`references/09-upgrade.md`](references/09-upgrade.md) for migration guidance).
+>
+> **For new squads, use v4.0.** v4.0 adds runtime-agnostic architecture with adapter separation, mandatory `maxTurns`, pattern maturity labels, and technical honesty throughout.
+>
+> v2.0 will continue to be accepted via shim indefinitely. v2.0 **nested YAML** format is scheduled for removal at v5.0; use `squads migrate --from v2 --to v4` to convert.
+
+---
 
 ```
 Title:    Squad Protocol Specification
 Version:  2.0.0
-Status:   ACTIVE
+Status:   SUPERSEDED by v4.0
 Date:     2026-04-03
 Authors:  gutomec
 License:  MIT

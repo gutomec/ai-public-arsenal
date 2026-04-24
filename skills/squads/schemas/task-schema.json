@@ -1,271 +1,72 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://squads.dev/schemas/task-schema.json",
-  "title": "Task Definition Schema",
-  "description": "JSON Schema for task YAML frontmatter. Based on SQUAD_PROTOCOL.md Section 6.1.",
-  "type": "object",
-  "required": ["task"],
-  "properties": {
-    "task": {
+  "title": "Task Definition Schema v4",
+  "description": "JSON Schema for task frontmatter. v4 flat format (name + optional description) or legacy v2 nested format (task + responsavel). See SQUAD_PROTOCOL_V4.md §7.",
+  "oneOf": [
+    {
+      "title": "v4 Flat Frontmatter Format (preferred)",
       "type": "object",
-      "description": "Core task identification and metadata.",
-      "required": ["name", "responsavel"],
+      "required": ["name"],
       "properties": {
         "name": {
           "type": "string",
-          "description": "Unique task name within the squad."
-        },
-        "responsavel": {
-          "type": "string",
-          "description": "Agent ID responsible for executing this task."
-        },
-        "id": {
-          "type": "string",
-          "description": "Unique task identifier. Auto-generated from name if not provided.",
-          "pattern": "^[a-z][a-z0-9-]*$"
-        },
-        "title": {
-          "type": "string",
-          "description": "Human-readable task title."
+          "pattern": "^[a-z][a-z0-9-]{1,63}$",
+          "description": "kebab-case task identifier. Tasks do NOT have owners in v4; workflows bind agents to tasks."
         },
         "description": {
           "type": "string",
-          "description": "Detailed description of what the task accomplishes."
-        },
-        "priority": {
-          "type": "string",
-          "description": "Task priority level.",
-          "enum": ["critical", "high", "medium", "low"],
-          "default": "medium"
+          "maxLength": 1024,
+          "description": "What this task accomplishes"
         },
         "version": {
           "type": "string",
-          "description": "Task definition version.",
-          "pattern": "^\\d+\\.\\d+\\.\\d+$"
-        }
-      },
-      "additionalProperties": false
-    },
-    "inputs": {
-      "type": "array",
-      "description": "Required inputs for task execution.",
-      "items": {
-        "type": "object",
-        "required": ["name", "type"],
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "Input parameter name."
-          },
-          "type": {
-            "type": "string",
-            "description": "Input data type.",
-            "enum": ["string", "number", "boolean", "file", "directory", "json", "array", "object"]
-          },
-          "description": {
-            "type": "string",
-            "description": "What this input is used for."
-          },
-          "required": {
-            "type": "boolean",
-            "description": "Whether this input is mandatory.",
-            "default": true
-          },
-          "default": {
-            "description": "Default value if not provided."
-          },
-          "validation": {
-            "type": "string",
-            "description": "Validation rule (regex pattern or constraint expression)."
-          }
+          "pattern": "^\\d+\\.\\d+\\.\\d+"
         },
-        "additionalProperties": false
-      }
-    },
-    "outputs": {
-      "type": "array",
-      "description": "Expected outputs produced by the task.",
-      "items": {
-        "type": "object",
-        "required": ["name", "type"],
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "Output parameter name."
-          },
-          "type": {
-            "type": "string",
-            "description": "Output data type.",
-            "enum": ["string", "number", "boolean", "file", "directory", "json", "array", "object"]
-          },
-          "description": {
-            "type": "string",
-            "description": "What this output represents."
-          },
-          "path": {
-            "type": "string",
-            "description": "Filesystem path for file/directory outputs (relative to squad root)."
-          }
-        },
-        "additionalProperties": false
-      }
-    },
-    "executionModes": {
-      "type": "object",
-      "description": "Supported execution modes for the task.",
-      "properties": {
-        "interactive": {
-          "type": "boolean",
-          "description": "Whether the task supports interactive execution.",
-          "default": true
-        },
-        "autonomous": {
-          "type": "boolean",
-          "description": "Whether the task supports autonomous execution.",
-          "default": false
-        },
-        "batch": {
-          "type": "boolean",
-          "description": "Whether the task supports batch execution.",
-          "default": false
-        },
-        "parallel": {
-          "type": "boolean",
-          "description": "Whether multiple instances can run in parallel.",
-          "default": false
-        }
-      },
-      "additionalProperties": false
-    },
-    "preConditions": {
-      "type": "array",
-      "description": "Conditions that must be true before the task can execute.",
-      "items": {
-        "type": "object",
-        "required": ["check"],
-        "properties": {
-          "check": {
-            "type": "string",
-            "description": "Description of the condition to verify."
-          },
-          "command": {
-            "type": "string",
-            "description": "Shell command that returns 0 if condition is met."
-          },
-          "fileExists": {
-            "type": "string",
-            "description": "Path to a file that must exist."
-          },
-          "taskCompleted": {
-            "type": "string",
-            "description": "ID of a task that must have completed successfully."
-          },
-          "failMessage": {
-            "type": "string",
-            "description": "Message to display if the precondition fails."
-          }
-        },
-        "additionalProperties": false
-      }
-    },
-    "steps": {
-      "type": "array",
-      "description": "Ordered list of steps to execute the task.",
-      "items": {
-        "type": "object",
-        "required": ["name"],
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "Step name."
-          },
-          "description": {
-            "type": "string",
-            "description": "What this step does."
-          },
-          "action": {
-            "type": "string",
-            "description": "Action type.",
-            "enum": ["prompt", "command", "read", "write", "edit", "validate", "delegate", "checkpoint"]
-          },
-          "command": {
-            "type": "string",
-            "description": "Shell command to execute (for action=command)."
-          },
-          "prompt": {
-            "type": "string",
-            "description": "Prompt text for the agent (for action=prompt)."
-          },
-          "delegateTo": {
-            "type": "string",
-            "description": "Agent ID to delegate to (for action=delegate)."
-          },
-          "file": {
-            "type": "string",
-            "description": "File path for read/write/edit actions."
-          },
-          "validation": {
-            "type": "string",
-            "description": "Validation expression to verify step success."
-          },
-          "onFailure": {
-            "type": "string",
-            "description": "Action on failure.",
-            "enum": ["abort", "retry", "skip", "fallback"],
-            "default": "abort"
-          },
-          "maxRetries": {
-            "type": "integer",
-            "description": "Maximum retries if onFailure=retry.",
-            "minimum": 0,
-            "default": 3
-          },
-          "checkpoint": {
-            "type": "boolean",
-            "description": "Whether to save a checkpoint after this step.",
-            "default": false
-          }
-        },
-        "additionalProperties": false
-      }
-    },
-    "autoClaude": {
-      "type": "object",
-      "description": "Autonomous execution configuration for this task.",
-      "properties": {
-        "enabled": {
-          "type": "boolean",
-          "description": "Whether this task can run autonomously.",
-          "default": false
-        },
-        "maxTurns": {
-          "type": "integer",
-          "description": "Maximum conversation turns in autonomous mode.",
-          "minimum": 1,
-          "default": 10
-        },
-        "model": {
-          "type": "string",
-          "description": "Preferred model for autonomous execution."
-        },
-        "allowedTools": {
+        "allowed-tools": {
           "type": "array",
-          "description": "Tools allowed during autonomous execution.",
-          "items": { "type": "string" }
+          "items": { "type": "string" },
+          "description": "Optional task-scoped tool whitelist"
         },
-        "stopCondition": {
+        "context": {
           "type": "string",
-          "description": "Condition that signals task completion in autonomous mode."
-        },
-        "timeoutMs": {
-          "type": "integer",
-          "description": "Timeout for autonomous execution in milliseconds.",
-          "minimum": 1000,
-          "default": 300000
+          "enum": ["fork", "inline"]
         }
       },
       "additionalProperties": false
+    },
+    {
+      "title": "Legacy v2 Nested Format",
+      "type": "object",
+      "required": ["task"],
+      "description": "Legacy v2 format with owner coupling. Deprecated in v4.",
+      "properties": {
+        "task": {
+          "type": "object",
+          "required": ["name"],
+          "properties": {
+            "name": { "type": "string" },
+            "responsavel": { "type": "string" },
+            "owner": { "type": "string" },
+            "id": { "type": "string" },
+            "title": { "type": "string" },
+            "description": { "type": "string" },
+            "priority": { "type": "string", "enum": ["critical", "high", "medium", "low"] },
+            "version": { "type": "string" }
+          },
+          "additionalProperties": true
+        },
+        "inputs": { "type": "array" },
+        "outputs": { "type": "array" },
+        "executionModes": { "type": "object" },
+        "preConditions": { "type": "array" },
+        "steps": { "type": "array" },
+        "autoClaude": { "type": "object" },
+        "owner": { "type": "string" },
+        "owner_type": { "type": "string" },
+        "atomic_layer": { "type": "string" }
+      },
+      "additionalProperties": true
     }
-  },
-  "additionalProperties": false
+  ]
 }

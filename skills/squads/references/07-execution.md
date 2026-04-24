@@ -1,130 +1,122 @@
 # Execution Runtime
 
 ## When to load
-Intent: EXECUTE, OBSERVE
+Intent: EXECUTE, RUN, DEBUG
 
 ## Protocol Reference
-SQUAD_PROTOCOL.md Sections 11, 12
+SQUAD_PROTOCOL_V4.md §8, §13, §14
 
-## Doom Loop Detection `[HARNESS]`
-Detects when an agent repeats identical or near-identical outputs.
+## Execution Concepts
 
-Configuration in squad.yaml:
-```yaml
-harness:
-  doom_loop:
-    enabled: true
-    max_identical_outputs: 3
-    similarity_threshold: 0.95
-    on_detect: change-strategy  # or: abort, escalate
+### Bounded Iteration
+
+All execution loops have explicit maximums. Squads declare `maxTurns` per agent (Core P4, mandatory). Workflow-level loops (QA review cycles, retry cascades) declare their own bounds.
+
+Without bounds, some runtimes loop indefinitely. `maxTurns` is the universal safeguard and must be declared on every agent.
+
+### Context Pressure and Compaction
+
+When an agent's conversation approaches the runtime's context capacity, the runtime may compact: summarize older turns, drop tool results, rewrite history to preserve essential information.
+
+Mechanism, thresholds, and templates are runtime-specific. The Core spec describes **practices** for surviving compaction, not specific numbers. See each adapter's §9 Context Window & Compaction for exact values.
+
+### Loop Detection
+
+Some runtimes are proposed to detect when an agent emits repeated near-identical outputs and take corrective action. At the time of this protocol, **no mainstream runtime implements harness-level loop detection**. `maxTurns` is the reliable guard.
+
+See Core §20 Proposed (Not Implemented).
+
+### Verification
+
+After a step completes, the harness can run configurable verification:
+- Schema validation of declared outputs.
+- Acceptance-criteria checklist.
+- Custom validator agents.
+
+Verification failures trigger the retry/escalation cascade (Core §14.5).
+
+## Execution Flow
+
+```
+1. Resolve squad path
+2. Detect runtime and load adapter
+3. Validate runtime_requirements and feature compatibility
+4. For each workflow step:
+   a. Compute wave (parallel-eligible steps at same dep level)
+   b. Dispatch to runtime via adapter
+   c. Collect handoff artifact
+   d. Validate against declared output schema (if any)
+   e. Apply verification
+   f. On failure: retry → rollback → escalate
+5. Report workflow outcome
 ```
 
-Detection algorithm:
-1. After each agent output, compare with previous N outputs
-2. If similarity >= threshold for max_identical_outputs consecutive times → trigger
-3. Actions: abort (stop immediately), escalate (notify human), change-strategy (try different approach)
+## Handoff Between Steps
 
-## Ralph Loop `[PROMPT]`
-Fresh context retry when normal retries fail.
+Each step produces a handoff artifact consumed by downstream steps. The artifact is a portable JSON structure (see Core §9 and `schemas/handoff-schema.json`). Squads that rely on passing raw conversation history fragment context and multiply token costs.
 
-Configuration:
-```yaml
-harness:
-  ralph_loop:
-    enabled: true
-    max_iterations: 5
-    persist_state: true
+## Surviving Compaction — Practices
+
+Core §13 Context Preservation describes four runtime-agnostic practices:
+
+1. **Put critical instructions in the initial prompt** — runtimes tend to preserve the original request.
+2. **Use tagged context blocks** — `<protocol-context>...</protocol-context>` blocks survive compaction via section preservation.
+3. **Include file paths and line numbers in output** — compactors preserve structured code references.
+4. **Keep agents small** — the cheapest compaction is the one that never happens.
+
+## Error Recovery Cascade
+
+```
+transient → retry with backoff (max 3)
+  → state → rollback + retry (max 3)
+    → contract → repair prompt + retry (max 3)
+      → configuration → skip or escalate
+        → fatal → escalate to human
 ```
 
-Process:
-1. Normal execution fails after retries
-2. Ralph loop creates FRESH context with: original task + specific error details only
-3. No accumulated conversation history (avoids bias from previous failures)
-4. State persisted to disk between iterations
-5. Max 5 iterations, then escalate to human
+Each step is bounded. If the same error pattern recurs, redesign the squad.
 
-## Context Compaction `[HARNESS]`
-Reduces context size while preserving essential information.
+---
 
-Configuration:
-```yaml
-harness:
-  context_compaction:
-    enabled: true
-    strategy: key-fields  # or: truncate, summarize
-    max_handoff_tokens: 4000
-    preserve_schema_fields: true
+## Output Path Resolution (v4.1)
+
+As of v4.1 (§16bis), the **skill/runtime** resolves output paths with a standard default. The `output:` field in squad.yaml is **optional** — absent or `"default"` uses the convention; a custom `base_dir` is honored.
+
+### Convention
+
+```
+{project-root}/.squads-outputs/{squad-name}/{YYYY-MM-DDTHHMMSS}-{slug}/
 ```
 
-Strategies:
-- `truncate`: Drop oldest messages, keep last N
-- `key-fields`: Extract only essential fields from handoff data
-- `summarize`: LLM summarizes conversation before handoff
+### Resolution Algorithm
 
-Token budgets (from Claude Code):
-| Parameter | Value |
-|-----------|-------|
-| Default context window | 200,000 tokens |
-| 1M context (Sonnet 4, Opus 4.6) | 1,000,000 tokens |
-| Max output tokens | 32,000 (default), 64,000 (upper) |
-| Auto-compact trigger | contextWindow - maxOutput - 13K buffer |
+1. **Project root:** `$SQUADS_PROJECT_ROOT` env var → walk up from cwd() until `.git/`, `AGENTS.md`, `CLAUDE.md`, `package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, or `Makefile` → fallback cwd()
+2. **Output root:** `{project-root}/.squads-outputs/`
+3. **Run directory:** `{output-root}/{squad-name}/{timestamp}-{slug}/`
+4. **Environment injection:** Runtime sets `$SQUAD_RUN_DIR` to the resolved run directory before executing the squad
 
-## Filesystem Collaboration `[HARNESS]`
-Agents write large artifacts to disk instead of passing inline.
+### Auto-Created README
 
-Configuration:
-```yaml
-harness:
-  filesystem_collaboration:
-    enabled: true
-    artifact_dir: .artifacts/{squad-name}
-    cleanup: manual  # or: on_complete, on_archive
-```
+On first run, the resolver creates `.squads-outputs/README.md` explaining the directory to AI agents. This ensures discoverability by Claude Code, Cursor, Codex, and other AI tools that scan project structure.
 
-## Execution Traces
-JSONL traces per step for observability.
+### Resolver Implementation
 
-Configuration:
-```yaml
-harness:
-  traces:
-    enabled: true
-    level: standard  # or: minimal, verbose
-    include_outputs: false
-```
+`lib/output-resolver.js` — call `resolveRunDir(squadName, slug)` to get the full path. Use `ensureRunDir(path)` to create it + auto-generate README.
 
-Trace fields: step_id, agent_id, task_name, started_at, completed_at, duration_ms, status, model_used, tokens_in, tokens_out, validation_result, harness_events
+### Lifecycle
 
-View traces: `*squad traces {squad} {run-id}`
+Outputs are intermediate. Users move final deliverables to their project's structure. Old runs can be deleted: `rm -rf .squads-outputs/{squad}/{old-run}/`
 
-## Self-Verify `[PROMPT]`
-Per-step verification before formal validation gate.
+---
 
-Configuration per workflow step:
-```yaml
-self_verify:
-  enabled: true
-  checklist:
-    - "Output contains required fields"
-    - "No placeholder values remain"
-  test_command: "node validate.js {output}"
-```
+## Runtime-Specific Details
 
-## State Persistence
-Run state saved to `.squad-state/{run-id}.yaml`:
-```yaml
-run_id: "run-20260402-143000"
-squad: "my-squad"
-workflow: "main-pipeline"
-status: running  # pending, running, paused, completed, failed
-current_step: 3
-steps:
-  - id: 1
-    status: completed
-    started_at: "2026-04-02T14:30:00Z"
-    completed_at: "2026-04-02T14:31:00Z"
-  - id: 2
-    status: completed
-  - id: 3
-    status: running
-```
+Numeric compaction thresholds, context window sizes, and compaction template specifics live in each adapter:
+
+| Runtime | See |
+|---------|-----|
+| Claude Code | [adapters/claude-code.md §9](../adapters/claude-code.md#9-context-window--compaction) |
+| Gemini CLI | [adapters/gemini-cli.md §9](../adapters/gemini-cli.md#9-context-window--compaction) |
+| Codex | [adapters/codex.md §9](../adapters/codex.md#9-context-window--compaction) |
+| Cursor | [adapters/cursor.md §9](../adapters/cursor.md#9-context-window--compaction) |
+| Antigravity | [adapters/antigravity.md §9](../adapters/antigravity.md#9-context-window--compaction) |

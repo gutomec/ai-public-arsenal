@@ -1,347 +1,368 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://squads.dev/schemas/squad-schema.json",
-  "title": "Squad Manifest Schema",
-  "description": "JSON Schema for squad.yaml — the squad manifest file. Based on SQUAD_PROTOCOL.md Section 4.1.",
+  "title": "Squad Manifest Schema v4",
+  "description": "JSON Schema for squad.yaml. Supports v4.0 (native), v3.1 (auto-upgrade), and v2.0 (legacy shim). See SQUAD_PROTOCOL_V4.md §5.",
   "type": "object",
   "required": ["name", "version"],
   "properties": {
     "name": {
       "type": "string",
-      "description": "Unique squad identifier. Lowercase, alphanumeric with hyphens.",
-      "pattern": "^[a-z][a-z0-9-]*$"
+      "description": "Unique squad identifier. kebab-case.",
+      "pattern": "^[a-z][a-z0-9-]{1,49}$"
     },
     "version": {
       "type": "string",
-      "description": "Semantic version of the squad.",
-      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+      "description": "Semver of the squad itself.",
+      "pattern": "^\\d+\\.\\d+\\.\\d+"
+    },
+    "protocol": {
+      "type": "string",
+      "description": "Squad Protocol version this squad targets. '4.0' for native v4 squads.",
+      "pattern": "^\\d+\\.\\d+(\\.\\d+)?$"
     },
     "short-title": {
       "type": "string",
-      "description": "Short display title for the squad.",
+      "description": "Short display title.",
       "maxLength": 60
     },
     "description": {
       "type": "string",
-      "description": "Full description of the squad's purpose and capabilities."
+      "description": "Squad purpose and capabilities."
     },
-    "author": {
-      "type": "string",
-      "description": "Author or organization name."
-    },
-    "license": {
-      "type": "string",
-      "description": "License identifier (e.g., MIT, Apache-2.0, proprietary)."
-    },
+    "author": { "type": "string" },
+    "license": { "type": "string" },
     "slashPrefix": {
       "type": "string",
-      "description": "Prefix for slash commands registered by this squad.",
       "pattern": "^[a-z][a-z0-9-]*$"
     },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+
+    "runtime_requirements": {
+      "type": "object",
+      "description": "v4: runtime compatibility declaration",
+      "additionalProperties": false,
+      "properties": {
+        "minimum": {
+          "type": "array",
+          "description": "At least one must be satisfied by host (fail-closed)",
+          "items": {
+            "type": "object",
+            "required": ["runtime"],
+            "properties": {
+              "runtime": { "type": "string" },
+              "version": { "type": "string" }
+            }
+          }
+        },
+        "compatible": {
+          "type": "array",
+          "description": "Works with graceful degradation",
+          "items": {
+            "type": "object",
+            "required": ["runtime"],
+            "properties": {
+              "runtime": { "type": "string" },
+              "version": { "type": "string" }
+            }
+          }
+        },
+        "incompatible": {
+          "type": "array",
+          "description": "Explicit non-support",
+          "items": {
+            "type": "object",
+            "required": ["runtime"],
+            "properties": {
+              "runtime": { "type": "string" },
+              "version": { "type": "string" },
+              "reason": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+
+    "features_required": {
+      "type": "array",
+      "description": "v4: hard feature requirements",
+      "items": {
+        "type": "string",
+        "enum": [
+          "max_turns", "tool_whitelist", "handoff_artifacts", "subagent_spawning",
+          "sequential_execution", "project_memory", "global_memory", "session_memory",
+          "hooks", "sandboxing", "web_search", "file_write", "shell_exec",
+          "fork_context", "teammate_primitive"
+        ]
+      }
+    },
+
+    "features_optional": {
+      "type": "array",
+      "description": "v4: features used if available, degrades gracefully",
+      "items": {
+        "type": "string",
+        "enum": [
+          "max_turns", "tool_whitelist", "handoff_artifacts", "subagent_spawning",
+          "sequential_execution", "project_memory", "global_memory", "session_memory",
+          "hooks", "sandboxing", "web_search", "file_write", "shell_exec",
+          "fork_context", "teammate_primitive"
+        ]
+      }
+    },
+
+    "components": {
+      "type": "object",
+      "description": "Squad components. v4 accepts string arrays (paths); legacy v2 accepts object arrays.",
+      "properties": {
+        "agents": {
+          "oneOf": [
+            {
+              "type": "array",
+              "description": "v4 format: file paths as strings",
+              "items": { "type": "string" }
+            },
+            {
+              "type": "array",
+              "description": "Legacy format: objects with id/role/file",
+              "items": {
+                "type": "object",
+                "required": ["id", "file"],
+                "properties": {
+                  "id": { "type": "string" },
+                  "role": { "type": "string" },
+                  "file": { "type": "string" },
+                  "title": { "type": "string" },
+                  "icon": { "type": "string" }
+                }
+              }
+            }
+          ]
+        },
+        "tasks": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["id", "file"],
+                "properties": {
+                  "id": { "type": "string" },
+                  "name": { "type": "string" },
+                  "file": { "type": "string" },
+                  "agent": { "type": "string" }
+                }
+              }
+            }
+          ]
+        },
+        "workflows": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["id", "file"],
+                "properties": {
+                  "id": { "type": "string" },
+                  "name": { "type": "string" },
+                  "file": { "type": "string" }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "runtimes": {
+      "type": "object",
+      "description": "v4: runtime-specific namespaced configuration. Each key is a runtime_id.",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+
+    "contracts": {
+      "type": "object",
+      "description": "v4: inter-task output schema contracts. Keys like 'task-a → task-b' map to schema paths.",
+      "additionalProperties": { "type": "string" }
+    },
+
+    "memory": {
+      "type": "object",
+      "description": "v4: memory scope and GC policy",
+      "additionalProperties": false,
+      "properties": {
+        "shared": {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string" },
+            "scope": { "type": "string" },
+            "path": { "type": "string" }
+          }
+        },
+        "persistent": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "type": { "type": "string" },
+            "scope": { "type": "string", "enum": ["project", "global"] },
+            "file": { "type": "string" },
+            "max_chars": { "type": "integer", "minimum": 1000 },
+            "garbage_collection": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "max_learned_facts": { "type": "integer", "minimum": 10 },
+                "review_interval_days": { "type": "integer", "minimum": 1 },
+                "conflict_resolution": { "type": "string", "enum": ["replace", "append", "prompt"] }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "capabilities": {
+      "type": "object",
+      "description": "v4: capability declaration (security)",
+      "additionalProperties": false,
+      "properties": {
+        "required": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "forbidden": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+
+    "execution": {
+      "type": "object",
+      "description": "v4: execution constraints",
+      "additionalProperties": true,
+      "properties": {
+        "sandbox": { "type": "boolean" },
+        "filesystem": { "type": "string" },
+        "network": { "type": "string" }
+      }
+    },
+
+    "env_required": {
+      "type": "array",
+      "description": "v4: environment variables required",
+      "items": { "type": "string" }
+    },
+
+    "ui": {
+      "type": "object",
+      "description": "v4: marketplace/UI metadata (never affects runtime)",
+      "additionalProperties": true,
+      "properties": {
+        "icon": { "type": "string" },
+        "category": { "type": "string" },
+        "agents_metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "icon": { "type": "string" },
+              "archetype": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+
+    "agents_metadata": {
+      "type": "object",
+      "description": "Legacy: top-level agents_metadata (auto-migrated to ui.agents_metadata in v4)",
+      "additionalProperties": true
+    },
+
+    "observability": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "tracing": { "type": "string" },
+        "log_level": { "type": "string" }
+      }
+    },
+
     "runtime": {
       "type": "object",
-      "description": "Runtime environment configuration.",
+      "description": "Legacy v2: runtime engine config (deprecated in v4, use runtime_requirements)",
       "properties": {
         "engine": {
           "type": "string",
-          "description": "Primary runtime engine.",
           "enum": ["node", "python", "shell", "hybrid"]
         },
-        "node": {
-          "type": "string",
-          "description": "Required Node.js version (semver range).",
-          "pattern": "^[><=~^]?\\d+"
-        },
-        "python": {
-          "type": "string",
-          "description": "Required Python version (semver range).",
-          "pattern": "^[><=~^]?\\d+"
-        }
+        "node": { "type": "string" },
+        "python": { "type": "string" }
       },
       "additionalProperties": false
     },
     "requires": {
       "type": "object",
-      "description": "External requirements and capabilities needed.",
+      "description": "Legacy v2: external requirements",
+      "additionalProperties": true,
       "properties": {
-        "tools": {
-          "type": "array",
-          "description": "List of CLI tools required (e.g., git, docker, npm).",
-          "items": { "type": "string" }
-        },
-        "mcps": {
-          "type": "array",
-          "description": "List of MCP servers required.",
-          "items": { "type": "string" }
-        },
-        "skills": {
-          "type": "array",
-          "description": "List of skills this squad depends on.",
-          "items": { "type": "string" }
-        }
-      },
-      "additionalProperties": false
-    },
-    "tags": {
-      "type": "array",
-      "description": "Categorization tags for discovery and filtering.",
-      "items": { "type": "string" }
-    },
-    "components": {
-      "type": "object",
-      "description": "Squad component declarations.",
-      "properties": {
-        "agents": {
-          "type": "array",
-          "description": "List of agent definitions.",
-          "items": {
-            "type": "object",
-            "required": ["id", "role", "file"],
-            "properties": {
-              "id": {
-                "type": "string",
-                "description": "Unique agent identifier within the squad."
-              },
-              "role": {
-                "type": "string",
-                "description": "Agent role (e.g., orchestrator, engineer, reviewer)."
-              },
-              "file": {
-                "type": "string",
-                "description": "Path to agent definition file relative to squad root."
-              },
-              "title": {
-                "type": "string",
-                "description": "Human-readable agent title."
-              },
-              "icon": {
-                "type": "string",
-                "description": "Emoji or icon for the agent."
-              }
-            },
-            "additionalProperties": false
-          }
-        },
-        "tasks": {
-          "type": "array",
-          "description": "List of task definitions.",
-          "items": {
-            "type": "object",
-            "required": ["id", "name", "file"],
-            "properties": {
-              "id": {
-                "type": "string",
-                "description": "Unique task identifier within the squad."
-              },
-              "name": {
-                "type": "string",
-                "description": "Human-readable task name."
-              },
-              "file": {
-                "type": "string",
-                "description": "Path to task definition file relative to squad root."
-              },
-              "agent": {
-                "type": "string",
-                "description": "Default agent ID responsible for this task."
-              }
-            },
-            "additionalProperties": false
-          }
-        },
-        "workflows": {
-          "type": "array",
-          "description": "List of workflow definitions.",
-          "items": {
-            "type": "object",
-            "required": ["id", "name", "file"],
-            "properties": {
-              "id": {
-                "type": "string",
-                "description": "Unique workflow identifier within the squad."
-              },
-              "name": {
-                "type": "string",
-                "description": "Human-readable workflow name."
-              },
-              "file": {
-                "type": "string",
-                "description": "Path to workflow definition file relative to squad root."
-              }
-            },
-            "additionalProperties": false
-          }
-        }
-      },
-      "additionalProperties": false
+        "tools": { "type": "array", "items": { "type": "string" } },
+        "mcps": { "type": "array", "items": { "type": "string" } },
+        "skills": { "type": "array", "items": { "type": "string" } }
+      }
     },
     "scripts": {
       "type": "object",
-      "description": "Lifecycle scripts executed at specific phases.",
-      "properties": {
-        "preActivate": {
-          "type": "string",
-          "description": "Command to run before activation."
-        },
-        "postActivate": {
-          "type": "string",
-          "description": "Command to run after activation."
-        },
-        "preRun": {
-          "type": "string",
-          "description": "Command to run before workflow execution."
-        },
-        "postRun": {
-          "type": "string",
-          "description": "Command to run after workflow execution."
-        },
-        "validate": {
-          "type": "string",
-          "description": "Custom validation script."
-        },
-        "build": {
-          "type": "string",
-          "description": "Build script for squad assets."
-        },
-        "test": {
-          "type": "string",
-          "description": "Test script for squad validation."
-        }
-      },
+      "description": "Legacy v2: lifecycle scripts (still supported)",
       "additionalProperties": true
     },
     "config": {
       "type": "object",
-      "description": "Squad-level configuration parameters.",
-      "properties": {
-        "maxConcurrentAgents": {
-          "type": "integer",
-          "description": "Maximum number of agents that can run concurrently.",
-          "minimum": 1,
-          "default": 3
-        },
-        "timeoutMs": {
-          "type": "integer",
-          "description": "Default timeout for task execution in milliseconds.",
-          "minimum": 1000,
-          "default": 300000
-        },
-        "retryPolicy": {
-          "type": "object",
-          "properties": {
-            "maxRetries": { "type": "integer", "minimum": 0, "default": 3 },
-            "backoffMs": { "type": "integer", "minimum": 100, "default": 1000 },
-            "backoffMultiplier": { "type": "number", "minimum": 1, "default": 2 }
-          },
-          "additionalProperties": false
-        },
-        "harness": {
-          "type": "object",
-          "description": "Harness engineering configuration (v3+ feature, opt-in).",
-          "properties": {
-            "enabled": { "type": "boolean", "default": false },
-            "doomLoopDetection": { "type": "boolean", "default": true },
-            "maxDoomLoopIterations": { "type": "integer", "minimum": 1, "default": 3 },
-            "selfVerify": { "type": "boolean", "default": true },
-            "traces": { "type": "boolean", "default": true },
-            "contextCompaction": { "type": "boolean", "default": false }
-          },
-          "additionalProperties": false
-        }
-      },
+      "description": "Legacy v2: squad-level config (harness-specific settings auto-migrate to adapters)",
       "additionalProperties": true
     },
     "dependencies": {
       "type": "object",
-      "description": "External package dependencies.",
-      "properties": {
-        "node": {
-          "type": "object",
-          "description": "Node.js packages (name → semver).",
-          "additionalProperties": { "type": "string" }
-        },
-        "python": {
-          "type": "object",
-          "description": "Python packages (name → version spec).",
-          "additionalProperties": { "type": "string" }
-        }
-      },
-      "additionalProperties": false
+      "additionalProperties": true
     },
     "mcps": {
       "type": "array",
-      "description": "MCP server configurations used by this squad.",
-      "items": {
-        "type": "object",
-        "required": ["name", "command"],
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "MCP server identifier."
-          },
-          "command": {
-            "type": "string",
-            "description": "Command to start the MCP server."
-          },
-          "args": {
-            "type": "array",
-            "description": "Arguments for the MCP server command.",
-            "items": { "type": "string" }
-          },
-          "env": {
-            "type": "object",
-            "description": "Environment variables for the MCP server.",
-            "additionalProperties": { "type": "string" }
-          }
-        },
-        "additionalProperties": false
-      }
+      "items": { "type": "object" }
     },
     "integration": {
       "type": "object",
-      "description": "External integration configuration.",
-      "properties": {
-        "ci": {
-          "type": "object",
-          "description": "CI/CD integration settings.",
-          "properties": {
-            "provider": { "type": "string", "enum": ["github-actions", "gitlab-ci", "circleci", "jenkins", "custom"] },
-            "configFile": { "type": "string" }
-          },
-          "additionalProperties": true
-        },
-        "notifications": {
-          "type": "object",
-          "description": "Notification integration settings.",
-          "properties": {
-            "slack": {
-              "type": "object",
-              "properties": {
-                "webhook": { "type": "string" },
-                "channel": { "type": "string" }
-              },
-              "additionalProperties": false
-            },
-            "discord": {
-              "type": "object",
-              "properties": {
-                "webhook": { "type": "string" }
-              },
-              "additionalProperties": false
-            }
-          },
-          "additionalProperties": true
-        },
-        "artifacts": {
-          "type": "object",
-          "description": "Artifact storage configuration.",
-          "properties": {
-            "outputDir": { "type": "string", "default": ".artifacts" },
-            "retentionDays": { "type": "integer", "minimum": 1, "default": 30 }
-          },
-          "additionalProperties": false
-        }
-      },
+      "additionalProperties": true
+    },
+
+    "state": {
+      "type": "object",
+      "description": "State management config (v3+)",
+      "additionalProperties": true
+    },
+    "model_strategy": {
+      "type": "object",
+      "description": "Model routing hints (v3+, migrated to adapters in v4)",
+      "additionalProperties": true
+    },
+    "harness": {
+      "type": "object",
+      "description": "Legacy v3 harness config — v4 migrates these to adapter namespaces",
       "additionalProperties": true
     }
   },

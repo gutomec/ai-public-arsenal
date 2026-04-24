@@ -1,84 +1,103 @@
 # Context Engineering
 
 ## When to load
-Intent: any (reference material for context-aware behavior)
+Intent: OPTIMIZE, DEBUG, DESIGN
 
 ## Protocol Reference
-SQUAD_PROTOCOL.md Section 11
+SQUAD_PROTOCOL_V4.md §12, §13
 
-## Token Budget Numbers
+## Context Is a Budget
 
-| Parameter | Value | Source |
-|-----------|-------|--------|
-| Default context window | 200,000 tokens | context.ts |
-| 1M context (Sonnet 4, Opus 4.6) | 1,000,000 tokens | context.ts |
-| Max output (default) | 32,000 tokens | context.ts |
-| Max output (upper) | 64,000 tokens | context.ts |
-| Capped default | 8,000 tokens | context.ts |
-| Compact max output | 20,000 tokens | context.ts |
-| Auto-compact buffer | 13,000 tokens | autoCompact.ts |
+Every agent operates inside a finite token budget (its context window). Every token consumed is a token unavailable for future reasoning. Good squads treat context as a precious resource.
 
-## Auto-Compaction Trigger
-```
-effectiveWindow = min(contextWindow, CLAUDE_CODE_AUTO_COMPACT_WINDOW)
-                  - min(maxOutputTokens, 20_000)
-```
-When estimated tokens exceed effectiveWindow → auto-compact triggers.
+## Three Metrics
 
-## Compaction Services
-| Service | Purpose |
-|---------|---------|
-| autoCompact | Automatic trigger on token threshold |
-| compact | Core summarization via forked agent |
-| microCompact | Lightweight per-result truncation |
+| Metric | Formula | Detects |
+|--------|---------|---------|
+| **Token Utility Ratio** | actionable tokens / total tokens | Inflated prompts |
+| **Context Density** | unique information / token count | Repetition across agents |
+| **Handoff Overhead** | handoff tokens / total tokens | Over-fragmentation |
 
-## Agent Handoff Protocol `[PROMPT]`
-When switching agents, generate compact handoff artifact:
-```yaml
-handoff:
-  from_agent: "{current}"
-  to_agent: "{next}"
-  story_context:
-    story_id: "{id}"
-    story_path: "{path}"
-    current_task: "{task}"
-    branch: "{branch}"
-  decisions: [...]      # max 5
-  files_modified: [...]  # max 10
-  blockers: [...]        # max 3
-  next_action: "{action}"
-```
+A healthy squad has high utility ratio, high density, and low handoff overhead.
 
-Constraints:
-- Max artifact size: 500 tokens
-- Max retained summaries: 3 (oldest discarded)
-- Target compaction: ~379 tokens
-- Savings: 33-57% vs full persona retention
+## Budget Discipline (Relative, Not Absolute)
 
-## Skill Context Engineering
-This skill uses lazy loading to minimize context usage:
-- SKILL.md: ~200 lines (~600 tokens) — always loaded
-- References: ~60-120 lines each (~200-400 tokens) — loaded per intent
-- SQUAD_PROTOCOL.md: 1146 lines (~4000 tokens) — read by section, NEVER fully
-- Target: <2000 tokens per intent
+Core expresses budgets as **relative fractions** of the runtime's context window, not absolute numbers:
 
-## API Retry Strategy `[HARNESS]`
-```
-BASE_DELAY = 500ms
-MAX_RETRIES = 10
-delay(n) = min(500 * 2^(n-1), 32000) + random(0, 0.25 * base)
-```
-| Attempt | Delay range |
-|---------|-------------|
-| 1 | 500-625ms |
-| 2 | 1,000-1,250ms |
-| 3 | 2,000-2,500ms |
-| 4 | 4,000-5,000ms |
-| 5 | 8,000-10,000ms |
-| 6 | 16,000-20,000ms |
-| 7+ | 32,000-40,000ms |
+| Target | Fraction of context window |
+|--------|---------------------------|
+| Agent body | ≤ 1.5% |
+| Handoff artifact | ≤ 0.25% |
+| Session artifacts cumulatively | ≤ 5% |
 
-## Denial Tracking `[HARNESS]`
-Prevents doom loops in permission system:
-- maxConsecutive: 3 denials → fall back to user prompting
-- maxTotal: 20 denials → fall back to user prompting
+Adapters publish absolute values in their §9 Context Window & Compaction.
+
+## Why Relative?
+
+Context windows vary by runtime and model. A body that is 2,500 tokens is fine in one runtime and catastrophic in another. Expressing budgets relative to the window makes squads portable.
+
+## The Biggest Lever Is Handoff Discipline
+
+Shrinking agent bodies saves tokens per turn. But squads that pass full conversation history between steps **multiply** token costs by the number of steps. The bigger lever is handoff discipline:
+
+- Structured handoff artifacts (not full histories).
+- Task output schemas with declared fields.
+- Contract validation at each step boundary.
+
+A squad with 2,500-token bodies and disciplined handoffs often uses fewer total tokens than a squad with 1,000-token bodies and history passing.
+
+## Context Density Patterns
+
+### Good Density
+- One fact per sentence.
+- No repetition across agents.
+- Specific references (file:line) instead of prose descriptions.
+- Schemas defined once, referenced many times.
+
+### Poor Density
+- Multiple agents re-explaining the same domain.
+- Verbose persona prose at the top of every agent.
+- Long descriptions of what the agent should NOT do (use DO NOT bullets, not paragraphs).
+- Duplicated examples across sibling agents.
+
+## Context Pressure Is a Runtime Concern
+
+When context usage approaches the runtime's limit, the runtime applies compaction. Mechanism and thresholds vary by runtime and must be documented in the adapter, not Core. Core provides:
+
+- Relative budget targets (above).
+- Four survival practices (Core §13).
+- Handoff artifact schema (Core §9).
+
+## Agent Body Sizing
+
+Target: 1.5% of the runtime's context window.
+
+When the body grows past the target, the usual cause is that the agent has multiple responsibilities. Split it:
+
+- If two DO sections address different domains → two agents.
+- If process has a natural handoff point → split at the handoff.
+- If examples consume more than half the body → move examples to `references/` loaded on demand.
+
+## Tool Description Overhead
+
+Tools consume context via their declared schemas. An agent with many tools may burn significant context on tool schemas alone. Declare only the tools an agent uses.
+
+Portable tool names in `tools:` avoid the overhead of verbose runtime-specific tool declarations.
+
+## Memory Overhead
+
+Persistent memory (project, global scopes) is injected into every agent invocation. A large memory file is repeated token cost on every call. GC policy (Core §11.5) caps this.
+
+---
+
+## Runtime-Specific Details
+
+Absolute token budgets, compaction thresholds, and memory injection mechanics are runtime-specific:
+
+| Runtime | See |
+|---------|-----|
+| Claude Code | [adapters/claude-code.md §9](../adapters/claude-code.md#9-context-window--compaction) |
+| Gemini CLI | [adapters/gemini-cli.md §9](../adapters/gemini-cli.md#9-context-window--compaction) |
+| Codex | [adapters/codex.md §9](../adapters/codex.md#9-context-window--compaction) |
+| Cursor | [adapters/cursor.md §9](../adapters/cursor.md#9-context-window--compaction) |
+| Antigravity | [adapters/antigravity.md §9](../adapters/antigravity.md#9-context-window--compaction) |

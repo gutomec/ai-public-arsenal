@@ -4,7 +4,7 @@
 Intent: CREATE (keywords: create, new, scaffold, generate, build squad)
 
 ## Protocol Reference
-cc-squad-standard.md (primary), SQUAD_PROTOCOL.md Section 4
+SQUAD_PROTOCOL_V4.md §5–§8
 
 ## Creation Pipeline
 
@@ -12,107 +12,148 @@ cc-squad-standard.md (primary), SQUAD_PROTOCOL.md Section 4
 
 | Question | Field | Default |
 |----------|-------|---------|
-| Squad purpose? | description | — |
-| Squad name? (kebab-case) | name | derived from purpose |
-| Domain/tags? | tags | — |
-| How many agents? | components.agents | 3 |
+| Squad purpose? | `description` | — |
+| Squad name? (kebab-case) | `name` | derived from purpose |
+| Target runtimes? | `runtime_requirements` | [claude-code] |
+| Required features? | `features_required` | [max_turns, tool_whitelist, handoff_artifacts] |
+| Domain/tags? | `tags` | — |
+| How many agents? | `components.agents` | 3 |
 | Agent roles? | agent definitions | — |
-| Slash command prefix? | slashPrefix | first 3 chars of name |
+| Slash command prefix? | `slashPrefix` | first 3 chars of name |
 
 ### Phase 2: Scaffold
 
 ```bash
-mkdir -p ~/squads/{name}/{agents,tasks,workflows}
+mkdir -p ~/squads/{name}/{agents,tasks,workflows,schemas}
 ```
 
-### Phase 3: Generate squad.yaml
+### Phase 3: Generate squad.yaml (v4)
 
 ```yaml
 name: my-squad
 version: "1.0.0"
+protocol: "4.0"
 description: "What this squad does"
 author: "author"
 license: MIT
 slashPrefix: msq
 tags: [domain, keywords]
 
+runtime_requirements:
+  minimum:
+    - runtime: claude-code
+      version: ">=2.0.0"
+  compatible:
+    - runtime: gemini-cli
+      version: ">=1.0.0"
+  incompatible: []
+
+features_required:
+  - max_turns
+  - tool_whitelist
+  - handoff_artifacts
+
+features_optional:
+  - subagent_spawning
+  - project_memory
+
 components:
   agents:
-    - agent-one.md
-    - agent-two.md
+    - agents/agent-one.md
+    - agents/agent-two.md
   tasks:
-    - task-one.md
-    - task-two.md
+    - tasks/task-one.md
+    - tasks/task-two.md
   workflows:
-    - main-pipeline.yaml
+    - workflows/main-pipeline.yaml
 
-agents_metadata:
-  agent-one:
-    icon: "🔍"
-    archetype: Builder
-  agent-two:
-    icon: "📊"
-    archetype: Guardian
+contracts:
+  task-one → task-two: schemas/task-one-output.json
 
-state:
-  enabled: true
-  storage: file
-  checkpoint_dir: ".squad-state"
-  resume: true
+ui:
+  icon: "🔬"
+  category: "research"
+  agents_metadata:
+    agent-one:
+      icon: "🔍"
+      archetype: Builder
+    agent-two:
+      icon: "📊"
+      archetype: Guardian
 
-model_strategy:
-  orchestrator: "claude-sonnet-4"
-  workers: "claude-sonnet-4"
-
-harness:
-  doom_loop:
+memory:
+  persistent:
     enabled: true
-    max_identical_outputs: 3
-    on_detect: abort
-  context_compaction:
-    enabled: true
-    strategy: key-fields
-    max_handoff_tokens: 4000
-  self_verify:
-    default_enabled: true
+    scope: project
+    file: SQUAD_MEMORY.md
+    max_chars: 40000
+    garbage_collection:
+      max_learned_facts: 200
+      review_interval_days: 30
+      conflict_resolution: replace
+
+runtimes:
+  claude-code:
+    # CC-specific config (optional)
+  codex:
+    # Codex-specific config (optional)
 ```
 
-### Phase 4: Generate agents (CC format)
+### Phase 4: Generate agents (v4 flat frontmatter)
 
-Use template: `templates/agent-cc.md.tmpl`
+Use template: `templates/agent-cc.md.tmpl` (updated for v4).
 
 ```yaml
 ---
 name: agent-name
-description: "When to use — one paragraph"
-tools: [Read, Write, Bash]
+description: "[Verb] [domain]. Use when [trigger]. Do NOT use for [anti-pattern]."
+maxTurns: 25
+tools: [read, write, bash]
+model: sonnet
 ---
 
-You are [role]. You [approach].
+You are [specific role] for [domain]. You [primary action]. You [primary boundary].
 
-## Guidelines
-- [principle 1]
-- [principle 2]
-- [principle 3]
+# Guidelines
 
-## Process
-1. [step 1]
-2. [step 2]
-3. [step 3]
+## DO
+- [Principle 1]
+- [Principle 2]
+- [Principle 3]
 
-## Output
-[format and location]
+## DO NOT
+- [Anti-pattern 1]
+- [Anti-pattern 2]
+
+# Process
+1. [Step 1]
+2. [Step 2]
+3. [Step 3]
+
+# Output
+[Format] at [location]
+
+## GOOD example
+[Concrete example]
+
+## BAD example (do NOT produce)
+[What to avoid + why]
+
+# Safety Boundaries
+- NEVER [destructive action]
+- If uncertain: [safe fallback]
 ```
 
 **Rules:**
-- Body target: 1000–2000 tokens
-- Max body: 2500 tokens (split agent if larger)
-- Prose only — no YAML in body
-- 4 sections: opening paragraph + Guidelines + Process + Output
+- `maxTurns` is **mandatory** (P4).
+- Body target: 1000–2000 tokens. Max: 1.5% of target context window.
+- Prose only in body — no YAML.
+- 4 sections minimum: identity + Guidelines + Process + Output.
+- Use portable semantic tool names (`read`, `write`, `grep`, etc.). Override per runtime under `runtimes.{id}.tools` if needed.
 
-### Phase 5: Generate tasks (CC format)
+### Phase 5: Generate tasks (v4 flat frontmatter)
 
-Use template: `templates/task-cc.md.tmpl`
+Use template: `templates/task-cc.md.tmpl`.
 
 ```yaml
 ---
@@ -123,26 +164,33 @@ description: "What this accomplishes"
 # Task Name
 
 ## Input
-[what this receives]
+[What this receives]
 
 ## Steps
-1. [step]
-2. [step]
+1. [Step]
+2. [Step]
 
 ## Output
-[what to produce]
+[What to produce, where to save]
 
 ## Acceptance Criteria
-- [criterion]
+- [Binary verifiable criterion]
+- [Binary verifiable criterion]
+
+## Output Schema
+[Inline description or reference to schemas/task-name.json]
 ```
 
-**Note:** Tasks do NOT have `owner`. The workflow decides who executes.
+**Rules:**
+- Tasks do NOT have owners. Workflows bind agents to tasks.
+- Acceptance criteria must be binary and verifiable.
+- Declare output schema if downstream tasks consume this output.
 
 ### Phase 6: Generate workflow
 
 ```yaml
 name: main_pipeline
-description: "What this workflow does"
+description: "What this workflow accomplishes"
 
 steps:
   - id: step-1
@@ -155,10 +203,23 @@ steps:
     depends_on: [step-1]
 
 success_indicators:
-  - "criterion 1"
-  - "criterion 2"
+  - "All target files processed"
+  - "Output schema validated"
+  - "No unaddressed critical findings"
 ```
 
 ### Phase 7: Validate
 
-Run `*squad validate {name}` → must be SAFE (100/100).
+Run `*squad validate {name}` → must pass all Core blocking checks.
+
+---
+
+## Runtime-Specific Details
+
+| Runtime | Notes on creation |
+|---------|------------------|
+| Claude Code | [adapters/claude-code.md §4](../adapters/claude-code.md#4-frontmatter-mapping) |
+| Gemini CLI | [adapters/gemini-cli.md §4](../adapters/gemini-cli.md#4-frontmatter-mapping) |
+| Codex | [adapters/codex.md §4](../adapters/codex.md#4-frontmatter-mapping) |
+| Cursor | [adapters/cursor.md §4](../adapters/cursor.md#4-frontmatter-mapping) |
+| Antigravity | [adapters/antigravity.md §4](../adapters/antigravity.md#4-frontmatter-mapping) |

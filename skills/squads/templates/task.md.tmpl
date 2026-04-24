@@ -1,61 +1,25 @@
 ---
-templates: []
-tools:
-  - bash
-  - grep
-  - read
-  - write
-  - edit
-checklists: []
+name: {{task-name}}
+description: "{{what-this-accomplishes}}"
 ---
 
-# Task: {{task-name}}
+# {{Task Title}}
 
-## Task Definition
-- **name:** {{taskName}}
-- **responsavel:** @{{agent-id}}
-- **responsavel_type:** Agente
-- **atomic_layer:** {{layer}}
-
-## Inputs
-| Campo | Tipo | Origem | Obrigatorio | Default |
-|-------|------|--------|-------------|---------|
-| {{input_name}} | string | user | true | — |
+## Input
+{{what-this-receives}}
 
 ## Steps
+1. {{step-1}}
+2. {{step-2}}
+3. {{step-3}}
 
-### Step 1: {{STEP_1_NAME}}
-- **action:** {{describe action}}
-- **validation:** {{how to verify}}
-- **onFailure:** halt
+## Output
+{{format}} at output/{{location}}
 
-### Step 2: {{STEP_2_NAME}}
-- **action:** {{describe action}}
-- **validation:** {{how to verify}}
-- **onFailure:** retry
+## Acceptance Criteria
+- {{binary-verifiable-criterion-1}}
+- {{binary-verifiable-criterion-2}}
+- {{binary-verifiable-criterion-3}}
 
-### Step 3: {{STEP_3_NAME}}
-- **action:** {{describe action}}
-- **validation:** {{how to verify}}
-- **onFailure:** escalate
-
-## Outputs
-| Campo | Tipo | Destino | Persistido |
-|-------|------|---------|-----------|
-| {{output_name}} | file | {{path}} | true |
-
-## Checklist
-- [ ] All inputs validated
-- [ ] All steps completed
-- [ ] Output meets acceptance criteria
-- [ ] No regressions introduced
-
-## Execution Modes
-- **yolo:** Execute all steps autonomously (0-1 prompts)
-- **interactive:** Confirm each step with user (5-10 prompts)
-- **preflight:** Show full plan before execution
-
-## Error Handling
-- **onFailure:** halt | retry | skip | escalate
-- **maxRetries:** 3
-- **escalateTo:** human
+## Output Schema
+{{inline-schema-or-reference-to-schemas-file}}
